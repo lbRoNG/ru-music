@@ -5,12 +5,16 @@ import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.ViewPager;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.adapter.TitleFragmentPagerAdapter;
+import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.presenter.home.MainActivity;
+import com.lbrong.rumusic.presenter.mine.MineFragment;
 import com.lbrong.rumusic.view.base.AppDelegate;
 
 import java.util.ArrayList;
@@ -41,6 +45,7 @@ public class MainDelegate extends AppDelegate {
         super.initWidget();
         initDrawer();
         initTab();
+        initToolbar();
     }
 
     /**
@@ -64,18 +69,33 @@ public class MainDelegate extends AppDelegate {
     }
 
     /**
+     * 初始化Toolbar
+     */
+    private void initToolbar(){
+        if(ObjectHelper.requireNonNull(getActivity())
+                && getActivity() instanceof AppCompatActivity){
+            AppCompatActivity activity = getActivity();
+            ActionBar bar = activity.getSupportActionBar();
+            if(ObjectHelper.requireNonNull(bar)){
+                bar.setDisplayShowTitleEnabled(false);
+            }
+            getToolbar().setNavigationIcon(R.drawable.ic_home_menu);
+        }
+    }
+
+    /**
      * 初始化tab
      */
-    private void initTab() {
+    private void initTab(){
         ViewPager pager = get(R.id.pager);
         TabLayout tabs = get(R.id.tabs);
-        List<Fragment> fragmentPresenters = new ArrayList<>();
-        fragmentPresenters.add(new Fragment());
-        fragmentPresenters.add(new Fragment());
-        fragmentPresenters.add(new Fragment());
+        List<Fragment> fragments = new ArrayList<>();
+        fragments.add(new MineFragment());
+        fragments.add(new Fragment());
+        fragments.add(new Fragment());
         TitleFragmentPagerAdapter pagerAdapter = new TitleFragmentPagerAdapter(
                 ((MainActivity)getActivity()).getSupportFragmentManager(),
-                fragmentPresenters,
+                fragments,
                 getActivity().getResources().getStringArray(R.array.main_tabs));
         pager.setOffscreenPageLimit(3);
         pager.setAdapter(pagerAdapter);

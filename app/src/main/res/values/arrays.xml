@@ -2,7 +2,7 @@
 <resources>
     <array name="main_tabs">
         <item>@string/main_tab_mine</item>
-        <item>@string/main_tab_find</item>
+        <item>@string/main_tab_song_list</item>
         <item>@string/main_tab_fm</item>
     </array>
 </resources>

@@ -20,19 +20,14 @@
             android:id="@+id/nav_setting"
             android:icon="@drawable/ic_menu_setting"
             android:title="@string/nav_item_setting" />
+        <item
+            android:id="@+id/nav_share"
+            android:icon="@drawable/ic_menu_share"
+            android:title="@string/nav_item_share" />
+        <item
+            android:id="@+id/nav_about"
+            android:icon="@drawable/ic_menu_about"
+            android:title="@string/nav_item_about" />
     </group>
-
-    <item android:title="@string/nav_item_other">
-        <menu>
-            <item
-                android:id="@+id/nav_share"
-                android:icon="@drawable/ic_menu_share"
-                android:title="@string/nav_item_share" />
-            <item
-                android:id="@+id/nav_about"
-                android:icon="@drawable/ic_menu_about"
-                android:title="@string/nav_item_about" />
-        </menu>
-    </item>
 
 </menu>
