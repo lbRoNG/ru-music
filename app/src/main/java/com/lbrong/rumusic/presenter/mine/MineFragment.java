@@ -117,7 +117,7 @@ public class MineFragment extends FragmentPresenter<MineDelegate> {
                             Log.i("cccccccccc",songs.toString());
                         } else {
                             ErrorView errorView = (ErrorView) viewDelegate.getErrorView();
-                            errorView.setText("没有本地音乐哦,快去搜索添加吧!").show();
+                            errorView.setText("没有本地音乐哦，快去搜索添加吧！").show();
                         }
                     }
                 })

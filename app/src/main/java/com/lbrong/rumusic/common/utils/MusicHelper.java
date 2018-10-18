@@ -10,7 +10,6 @@ import android.net.Uri;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
 import com.lbrong.rumusic.bean.Song;
 
@@ -41,18 +40,17 @@ public final class MusicHelper {
         return musicHelper;
     }
 
-    public @Nullable
-    List<Song> getLocalMusic(@NonNull Context context) {
+    public List<Song> getLocalMusic(@NonNull Context context) {
         ContentResolver contentResolver = context.getContentResolver();
+        List<Song> songList = new ArrayList<>();
         if (ObjectHelper.requireNonNull(contentResolver)) {
             Cursor cursor = contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
                     , null, null, null, MediaStore.Audio.Media.DEFAULT_SORT_ORDER);
 
             if (cursor == null) {
-                return null;
+                return songList;
             }
 
-            List<Song> songList = new ArrayList<>();
             if (cursor.moveToFirst()) {
                 for (int i = 0; i < cursor.getCount(); i++) {
                     Song m = new Song();
@@ -85,7 +83,7 @@ public final class MusicHelper {
                 return songList;
             }
         }
-        return null;
+        return songList;
     }
 
     private Bitmap getArtWorkFormFile(ContentResolver resolver, long songId, long albumId) {
