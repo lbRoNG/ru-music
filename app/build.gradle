@@ -71,6 +71,7 @@ dependencies {
     implementation deps.dialog.commons
     implementation deps.list.core
     implementation deps.glide.core
+    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
     annotationProcessor deps.glide.compiler
     implementation deps.permissions.core
     implementation deps.db.core

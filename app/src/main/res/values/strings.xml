@@ -1,3 +1,27 @@
 <resources>
-    <string name="app_name">如乐</string>
+    <string name="app_name">Ru-Music</string>
+    <string name="none_data">没有相关数据，点我刷新试试</string>
+    <string name="server_error">遇到不可预料的问题，点我刷新试试</string>
+    <string name="none_network">当前网络不可用，点我刷新试试</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Ru-Music</string>
+    <string name="nav_header_subtitle">无损下载,听你想听</string>
+    <string name="nav_item_share">分享</string>
+    <string name="nav_item_about">关于</string>
+    <string name="nav_item_other">其他</string>
+    <string name="nav_item_setting">设置</string>
+    <string name="nav_item_play">播放管理</string>
+    <string name="nav_item_download">下载管理</string>
+    <string name="nav_item_cache">缓存管理</string>
+
+    <string name="action_search">搜索</string>
+
+    <string name="main_tab_mine">我的</string>
+    <string name="main_tab_find">发现</string>
+    <string name="main_tab_fm">FM</string>
+
+
+
 </resources>
