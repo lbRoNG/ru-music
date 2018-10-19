@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rl_root"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="@dimen/song_item_height"
+    android:animateLayoutChanges="true"
     android:background="?attr/selectableItemBackground">
 
     <RelativeLayout
+        android:id="@+id/rl_song"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="@dimen/dp16">
+        android:layout_centerVertical="true"
+        android:layout_marginStart="@dimen/dp16"
+        android:layout_marginEnd="@dimen/dp16">
 
         <ImageView
             android:id="@+id/iv_cover"
@@ -20,22 +25,23 @@
 
         <ImageView
             android:id="@+id/iv_more"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@null"
+            android:padding="@dimen/dp8"
             android:src="@drawable/ic_mine_song_menu" />
 
-
-        <LinearLayout
+        <RelativeLayout
+            android:id="@+id/rl_info"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:layout_marginStart="@dimen/dp16"
-            android:layout_toEndOf="@id/iv_cover"
-            android:orientation="vertical">
+            android:layout_toStartOf="@id/iv_more"
+            android:layout_toEndOf="@id/iv_cover">
 
             <TextView
                 android:id="@+id/tv_song_name"
@@ -45,18 +51,46 @@
                 android:textColor="@color/textPrimary"
                 tools:text="难得有情人" />
 
+            <ImageView
+                android:id="@+id/iv_bitrate"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/tv_song_name"
+                android:layout_alignTop="@id/tv_singer"
+                android:layout_alignBottom="@id/tv_singer"
+                android:layout_marginEnd="@dimen/dp4"
+                android:contentDescription="@null"
+                android:visibility="visible"
+                tools:src="@drawable/ic_mine_song_sq" />
+
             <TextView
                 android:id="@+id/tv_singer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_below="@id/tv_song_name"
                 android:layout_marginTop="@dimen/dp2"
+                android:layout_toEndOf="@id/iv_bitrate"
                 android:singleLine="true"
                 android:textColor="@color/textSecondary"
                 android:textSize="@dimen/sp12"
                 tools:text="关淑怡" />
-
-        </LinearLayout>
+        </RelativeLayout>
 
     </RelativeLayout>
+
+    <SeekBar
+        android:id="@+id/skb_song"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/rl_song"
+        android:layout_marginStart="65dp"
+        android:max="100"
+        android:visibility="gone" />
+
+    <View
+        android:id="@+id/view_progress"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:background="#16ff5722" />
 
 </RelativeLayout>

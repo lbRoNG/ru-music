@@ -3,10 +3,13 @@ package com.lbrong.rumusic.presenter.mine;
 import android.Manifest;
 import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
+import android.support.v7.widget.RecyclerView;
+import android.view.View;
 import android.widget.ImageView;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
+import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.bean.Song;
 import com.lbrong.rumusic.common.adapter.SongListAdapter;
@@ -30,7 +33,13 @@ import io.reactivex.schedulers.Schedulers;
  * @author lbRoNG
  * @since 2018/10/18
  */
-public class MineFragment extends FragmentPresenter<MineDelegate> {
+public class MineFragment
+       extends FragmentPresenter<MineDelegate>
+       implements BaseQuickAdapter.OnItemClickListener,BaseQuickAdapter.OnItemChildClickListener {
+
+    // 适配器
+    private SongListAdapter songAdapter;
+
     @Override
     protected Class<MineDelegate> getDelegateClass() {
         return MineDelegate.class;
@@ -41,6 +50,42 @@ public class MineFragment extends FragmentPresenter<MineDelegate> {
         super.init();
         // 获取权限
         judgePermission();
+    }
+
+    @Override
+    public void onDestroy() {
+        if(songAdapter != null){
+            songAdapter.clearProgressTimer();
+        }
+        super.onDestroy();
+    }
+
+    @Override
+    public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
+        Object temp = adapter.getItem(position);
+        if(temp instanceof Song){
+            if(songAdapter != null){
+                if(songAdapter.getPlayingSongPos() != position){
+                    // 复位上个播放的歌曲样式
+                    songAdapter.resetSongState();
+                    // 更新新播放歌曲的样式
+                    Song item = (Song) temp;
+                    item.getController().setPlaying(true);
+                    songAdapter.setPlayingSongPos(position);
+                    // 播放
+                    startPlay();
+                } else {
+                    // 重新播放
+                    songAdapter.setPlayingSongPos(position);
+                    replay();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onItemChildClick(BaseQuickAdapter adapter, View view, int position) {
+        viewDelegate.toast("child");
     }
 
     /**
@@ -117,7 +162,13 @@ public class MineFragment extends FragmentPresenter<MineDelegate> {
                     public void accept(List<Song> songs){
                         if(ObjectHelper.requireNonNull(songs)){
                             viewDelegate.getErrorView().hide();
-                            SongListAdapter adapter = new SongListAdapter(songs){
+
+                            if(songAdapter != null){
+                                songAdapter.setNewData(songs);
+                                return;
+                            }
+
+                            songAdapter = new SongListAdapter(songs){
                                 @Override
                                 protected void asyncCover(final ImageView view,final Song item) {
                                     addDisposable(
@@ -137,7 +188,10 @@ public class MineFragment extends FragmentPresenter<MineDelegate> {
                                     );
                                 }
                             };
-                            viewDelegate.setSongListAdapter(adapter);
+                            songAdapter.setOnItemClickListener(MineFragment.this);
+                            songAdapter.setOnItemChildClickListener(MineFragment.this);
+                            songAdapter.bindToRecyclerView((RecyclerView) viewDelegate.get(R.id.rv_song_list));
+                            viewDelegate.setSongListAdapter(songAdapter);
                         } else {
                             ErrorView errorView = (ErrorView) viewDelegate.getErrorView();
                             errorView.setText("没有本地音乐哦，快去搜索添加吧！").show();
@@ -145,6 +199,24 @@ public class MineFragment extends FragmentPresenter<MineDelegate> {
                     }
                 })
         );
+    }
+
+    /**
+     * 开始播放
+     */
+    private void startPlay(){
+        if(songAdapter != null){
+            songAdapter.startProgressTimer(0);
+        }
+    }
+
+    /**
+     * 重新播放
+     */
+    private void replay(){
+        if(songAdapter != null){
+            songAdapter.startProgressTimer(0);
+        }
     }
 
 }

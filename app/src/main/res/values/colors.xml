@@ -9,7 +9,7 @@
     <color name="textSecondary">#757575</color>
     <color name="textTransparent">#c5ffffff</color>
 
-    <color name="divider">#dcdcdc</color>
+    <color name="divider">#ececec</color>
 
     <color name="bg">#FFFFFF</color>
 </resources>

@@ -15,11 +15,41 @@ public class Song {
     private String artist;
     private long size;
     private String url;
-    private int isMusic;
+    private int music;
     private long duration;
     private String album;
     private int bitrate;
+    private PlayController controller;
     private WeakReference<Bitmap> bitmap;
+
+    public class PlayController{
+        private boolean playing;
+        private int current;
+
+        public boolean isPlaying() {
+            return playing;
+        }
+
+        public void setPlaying(boolean playing) {
+            this.playing = playing;
+        }
+
+        public int getCurrent() {
+            return current;
+        }
+
+        public void setCurrent(int current) {
+            this.current = current;
+        }
+    }
+
+    public PlayController getController() {
+        return controller == null ? controller = new PlayController() : controller;
+    }
+
+    public void setController(PlayController controller) {
+        this.controller = controller;
+    }
 
     public int getBitrate() {
         return bitrate;
@@ -85,12 +115,12 @@ public class Song {
         this.url = url;
     }
 
-    public int getIsMusic() {
-        return isMusic;
+    public int getMusic() {
+        return music;
     }
 
-    public void setIsMusic(int isMusic) {
-        this.isMusic = isMusic;
+    public void setMusic(int music) {
+        this.music = music;
     }
 
     public long getDuration() {

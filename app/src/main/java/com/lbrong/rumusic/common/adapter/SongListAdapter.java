@@ -2,33 +2,158 @@ package com.lbrong.rumusic.common.adapter;
 
 import android.graphics.Bitmap;
 import android.support.annotation.Nullable;
+import android.support.v7.widget.RecyclerView;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
+import android.widget.SeekBar;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.bean.Song;
+import com.lbrong.rumusic.common.utils.DensityUtils;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * @author lbRoNG
  * @since 2018/10/19
  */
 public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
+    // 正在播放的Song在适配器中的位置
+    private int playingSongPos = -1;
+    private Disposable timer;
 
-    public SongListAdapter(@Nullable List<Song> data) {
-        super(R.layout.item_base_song,data);
+    protected SongListAdapter(@Nullable List<Song> data) {
+        super(R.layout.item_basics_song,data);
     }
 
     protected void asyncCover(ImageView view,Song item){
 
     }
 
+    public int getPlayingSongPos() {
+        return playingSongPos;
+    }
+
+    public void setPlayingSongPos(int pos) {
+        // 上个
+        notifyItemChanged(playingSongPos);
+        // 更新
+        this.playingSongPos = pos;
+        // 新的
+        notifyItemChanged(playingSongPos);
+    }
+
+    /**
+     * 复位上一首播放的歌曲位置的item样式
+     */
+    public void resetSongState(){
+        // 有位置信息
+        if(playingSongPos != -1){
+            Song item = getItem(playingSongPos);
+            if(item != null && item.getController().isPlaying()){
+                item.getController().setPlaying(false);
+                notifyItemChanged(playingSongPos);
+            }
+        } else {
+            // 没有位置信息，遍历集合
+            for (int i = 0; i < getData().size(); i++) {
+                Song item = getItem(i);
+                if(item != null && item.getController().isPlaying()){
+                    playingSongPos = i;
+                    item.getController().setPlaying(false);
+                    notifyItemChanged(playingSongPos);
+                }
+            }
+        }
+    }
+
+    /**
+     * 清除计数任务
+     */
+    public void clearProgressTimer(){
+        if(timer != null && !timer.isDisposed()){
+            timer.dispose();
+        }
+    }
+
+    /**
+     * 开始计数器更新进度
+     */
+    public void startProgressTimer(int start){
+        Song playing = null;
+        if(playingSongPos != -1){
+            Song item = getItem(playingSongPos);
+            if(item != null && item.getController().isPlaying()){
+                playing = item;
+            }
+        } else {
+            // 没有位置信息，遍历集合
+            for (int i = 0; i < getData().size(); i++) {
+                Song item = getItem(i);
+                if(item != null && item.getController().isPlaying()){
+                    playingSongPos = i;
+                    playing = item;
+                }
+            }
+        }
+
+        // 清除之前的任务
+        clearProgressTimer();
+
+        // 重新开始
+        if(playing != null){
+            final long max = (playing.getDuration() / 1000 ) + 1;
+            timer = Observable.intervalRange(start + 1,max,0,1,TimeUnit.SECONDS)
+                    .subscribeOn(Schedulers.computation())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Consumer<Long>() {
+                        View view,view_;
+                        int totalWidth;
+                        @Override
+                        public void accept(Long progress){
+                            if(totalWidth == 0){
+                                totalWidth = DensityUtils.getScreenWidth();
+                            }
+
+                            if(view == null){
+                                view = getViewByPosition(playingSongPos,R.id.skb_song);
+                            }
+
+                            if(view_ == null){
+                                view_ = getViewByPosition(playingSongPos,R.id.view_progress);
+                            }
+
+                            if(view instanceof SeekBar){
+                                SeekBar seekBar = (SeekBar) view;
+                                seekBar.setProgress(Integer.parseInt(progress+""));
+                            }
+
+                            if(view_ != null){
+                                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) view_.getLayoutParams();
+                                params.width = (int) (totalWidth * progress / max);
+                                view_.setLayoutParams(params);
+                            }
+
+                        }
+                    });
+        }
+    }
+
     @Override
     protected void convert(BaseViewHolder helper, Song item) {
+        // cover
         WeakReference<Bitmap> wr = item.getBitmap();
         if(ObjectHelper.requireNonNull(wr)){
             Bitmap cover = wr.get();
@@ -41,7 +166,49 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
         } else {
             helper.setImageResource(R.id.iv_cover,R.drawable.ic_mine_song_default_cover);
         }
+        // info
         helper.setText(R.id.tv_song_name,item.getTitle());
         helper.setText(R.id.tv_singer,item.getArtist());
+        // bitrate
+        int bitrate = item.getBitrate();
+        boolean showBitrate = bitrate >= 320;
+        if(showBitrate){
+            helper.setImageResource(R.id.iv_bitrate,bitrate > 350 ? R.drawable.ic_mine_song_sq : R.drawable.ic_mine_song_hq);
+
+        }
+        helper.getView(R.id.iv_bitrate).setVisibility(showBitrate ? View.VISIBLE : View.GONE);
+        // 进度条是否显示
+        boolean isPlaying = item.getController().isPlaying();
+        // 记录
+        if(isPlaying){
+            playingSongPos = helper.getAdapterPosition();
+        }
+        helper.getView(R.id.skb_song).setVisibility(isPlaying ? View.VISIBLE : View.GONE);
+        helper.getView(R.id.view_progress).setVisibility(isPlaying ? View.VISIBLE : View.GONE);
+        RecyclerView.LayoutParams layoutParams = (RecyclerView.LayoutParams)
+                helper.itemView.getLayoutParams();
+        layoutParams.height = (int) mContext.getResources().getDimension(
+                isPlaying ? R.dimen.song_item_playing_height : R.dimen.song_item_height);
+        helper.itemView.setLayoutParams(layoutParams);
+        // 设置进度条
+        SeekBar bar = helper.getView(R.id.skb_song);
+        bar.setMax((int) (item.getDuration() / 1000));
+        bar.setProgress(0);
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if(fromUser){
+                    startProgressTimer(progress);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) { }
+        });
+        // 菜单点击
+        helper.addOnClickListener(R.id.iv_more);
     }
 }
