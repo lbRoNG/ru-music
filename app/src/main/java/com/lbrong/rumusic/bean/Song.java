@@ -18,7 +18,16 @@ public class Song {
     private int isMusic;
     private long duration;
     private String album;
+    private int bitrate;
     private WeakReference<Bitmap> bitmap;
+
+    public int getBitrate() {
+        return bitrate;
+    }
+
+    public void setBitrate(int bitrate) {
+        this.bitrate = bitrate;
+    }
 
     public WeakReference<Bitmap> getBitmap() {
         return bitmap;

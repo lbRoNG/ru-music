@@ -1,13 +1,15 @@
 package com.lbrong.rumusic.presenter.mine;
 
 import android.Manifest;
+import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
-import android.util.Log;
+import android.widget.ImageView;
 
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.bean.Song;
+import com.lbrong.rumusic.common.adapter.SongListAdapter;
 import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.PermissionPageUtils;
@@ -114,7 +116,28 @@ public class MineFragment extends FragmentPresenter<MineDelegate> {
                     @Override
                     public void accept(List<Song> songs){
                         if(ObjectHelper.requireNonNull(songs)){
-                            Log.i("cccccccccc",songs.toString());
+                            viewDelegate.getErrorView().hide();
+                            SongListAdapter adapter = new SongListAdapter(songs){
+                                @Override
+                                protected void asyncCover(final ImageView view,final Song item) {
+                                    addDisposable(
+                                            Flowable.fromCallable(new Callable<Bitmap>() {
+                                                @Override
+                                                public Bitmap call(){
+                                                    return MusicHelper.build().getAlbumArt(item.getUrl(),8);
+                                                }
+                                            }).subscribeOn(Schedulers.io())
+                                                    .observeOn(AndroidSchedulers.mainThread())
+                                                    .subscribe(new Consumer<Bitmap>() {
+                                                        @Override
+                                                        public void accept(Bitmap bitmap){
+                                                            view.setImageBitmap(bitmap);
+                                                        }
+                                                    })
+                                    );
+                                }
+                            };
+                            viewDelegate.setSongListAdapter(adapter);
                         } else {
                             ErrorView errorView = (ErrorView) viewDelegate.getErrorView();
                             errorView.setText("没有本地音乐哦，快去搜索添加吧！").show();

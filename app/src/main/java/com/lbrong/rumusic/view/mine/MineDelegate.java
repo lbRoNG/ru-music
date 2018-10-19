@@ -1,7 +1,9 @@
 package com.lbrong.rumusic.view.mine;
 
+import android.support.v7.widget.RecyclerView;
+
+import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
-import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.iface.view.IErrorView;
 import com.lbrong.rumusic.view.base.AppDelegate;
 
@@ -20,11 +22,8 @@ public class MineDelegate extends AppDelegate {
         return get(R.id.err_root);
     }
 
-    @Override
-    public void initWidget() {
-        super.initWidget();
-        if(ObjectHelper.requireNonNull(getErrorView())){
-            getErrorView().show();
-        }
+    public void setSongListAdapter(BaseQuickAdapter adapter){
+        RecyclerView view = get(R.id.rv_song_list);
+        view.setAdapter(adapter);
     }
 }

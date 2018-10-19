@@ -1,21 +1,19 @@
 package com.lbrong.rumusic.common.utils;
 
 import android.content.ContentResolver;
-import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
-import android.os.ParcelFileDescriptor;
+import android.media.MediaMetadataRetriever;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.lbrong.rumusic.bean.Song;
 
-import java.io.FileDescriptor;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +38,9 @@ public final class MusicHelper {
         return musicHelper;
     }
 
+    /**
+     * 获取本地音乐
+     */
     public List<Song> getLocalMusic(@NonNull Context context) {
         ContentResolver contentResolver = context.getContentResolver();
         List<Song> songList = new ArrayList<>();
@@ -61,7 +62,7 @@ public final class MusicHelper {
                     long size = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.SIZE));
                     String url = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA));
                     String album = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM));
-                    long albumId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID));
+                    int albumId = cursor.getInt(cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID));
                     int isMusic = cursor.getInt(cursor.getColumnIndex(MediaStore.Audio.Media.IS_MUSIC));
 
                     if (isMusic != 0 && duration / (500 * 60) >= 1) {
@@ -73,7 +74,11 @@ public final class MusicHelper {
                         m.setUrl(url);
                         m.setAlbum(album);
                         m.setAlbumId(albumId);
-                        m.setBitmap(new WeakReference<>(getArtwork(contentResolver,id,albumId,true,true)));
+                        m.setBitrate(getBitrate(size * 8,duration));
+                        Bitmap bitmap = getAlbumArt(url, 8);
+                        if(ObjectHelper.requireNonNull(bitmap)){
+                            m.setBitmap(new WeakReference<>(bitmap));
+                        }
                         songList.add(m);
                     }
                     cursor.moveToNext();
@@ -86,112 +91,36 @@ public final class MusicHelper {
         return songList;
     }
 
-    private Bitmap getArtWorkFormFile(ContentResolver resolver, long songId, long albumId) {
-        Bitmap bitmap = null;
-        if (albumId < 0 && songId < 0) {
-            throw new IllegalArgumentException("Must specify an album or song");
-        }
-
+    /**
+     * 获取专辑封面
+     * @param url mp3地址
+     * @param ratio 压缩比例
+     */
+    public @Nullable
+    Bitmap getAlbumArt(String url, int ratio) {
         try {
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            FileDescriptor fileDescriptor = null;
-            if (albumId < 0) {
-                Uri uri = Uri.parse("content://media/external/audio/media/" + songId + "/albumart");
-                ParcelFileDescriptor parcelFileDescriptor = resolver.openFileDescriptor(uri, "r");
-                if (parcelFileDescriptor != null) {
-                    fileDescriptor = parcelFileDescriptor.getFileDescriptor();
-                }
-            } else {
-                Uri uri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), albumId);
-                ParcelFileDescriptor pfd = resolver.openFileDescriptor(uri, "r");
-                if (pfd != null) {
-                    fileDescriptor = pfd.getFileDescriptor();
-                }
+            FileInputStream inputStream = new FileInputStream(new File(url).getAbsolutePath());
+            MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
+            mediaMetadataRetriever.setDataSource(inputStream.getFD());
+            byte[] picture = mediaMetadataRetriever.getEmbeddedPicture();
+            Bitmap bitmap= BitmapFactory.decodeByteArray(picture,0,picture.length);
+            if (ratio != 0) {
+                bitmap = ImageUtils.compressBitmap(bitmap, ratio);
             }
-
-            options.inSampleSize = 1;
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decodeFileDescriptor(fileDescriptor, null, options);
-            options.inSampleSize = calculateInSampleSize(options, 50, 50);
-            options.inJustDecodeBounds = false;
-            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-
-            bitmap = BitmapFactory.decodeFileDescriptor(fileDescriptor, null, options);
-
-        } catch (FileNotFoundException e) {
+            return bitmap;
+        } catch (Exception e) {
             e.printStackTrace();
-        }
-
-        return bitmap;
-    }
-
-    private Bitmap getArtwork(ContentResolver resolver, long songId, long albumId,
-                              boolean allowDefault, boolean small) {
-        if (albumId < 0) {
-            if (songId < 0) {
-                Bitmap bitmap = getArtWorkFormFile(resolver, songId, albumId);
-                if (bitmap != null) {
-                    return bitmap;
-                }
-            }
-            return null;
-        }
-        Uri uri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), albumId);
-        if (uri != null) {
-            InputStream inputStream;
-            try {
-                inputStream = resolver.openInputStream(uri);
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inSampleSize = 1;
-                options.inJustDecodeBounds = true;
-                BitmapFactory.decodeStream(inputStream, null, options);
-                if (small) {
-                    options.inSampleSize = calculateInSampleSize(options, 50, 50);
-                } else {
-                    options.inSampleSize = calculateInSampleSize(options, 600, 600);
-                }
-                options.inJustDecodeBounds = false;
-                options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-                inputStream = resolver.openInputStream(uri);
-                return BitmapFactory.decodeStream(inputStream, null, options);
-
-
-            } catch (FileNotFoundException e) {
-                Bitmap bitmap = getArtWorkFormFile(resolver, songId, albumId);
-                if (bitmap != null) {
-                    if (bitmap.getConfig() == null) {
-                        bitmap = bitmap.copy(Bitmap.Config.RGB_565, false);
-                        if (bitmap == null && allowDefault) {
-                            return null;
-                        }
-                    }
-                }
-                return bitmap;
-            }
         }
         return null;
     }
 
-    private int calculateInSampleSize(
-            BitmapFactory.Options options, int reqWidth, int reqHeight) {
-        // Raw height and width of image
-        final int height = options.outHeight;
-        final int width = options.outWidth;
-        int inSampleSize = 1;
-
-        if (height > reqHeight || width > reqWidth) {
-
-            final int halfHeight = height / 2;
-            final int halfWidth = width / 2;
-
-            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
-            // height and width larger than the requested height and width.
-            while ((halfHeight / inSampleSize) > reqHeight
-                    && (halfWidth / inSampleSize) > reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-
-        return inSampleSize;
+    /**
+     * 获取码率
+     * @param size 文件大小，bit
+     * @param duration 文件时长，ms
+     */
+    private int getBitrate(long size,long duration){
+        return (int) (size / duration);
     }
+
 }
