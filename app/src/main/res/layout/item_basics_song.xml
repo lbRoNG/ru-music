@@ -87,10 +87,11 @@
         android:max="100"
         android:visibility="gone" />
 
-    <View
+    <ProgressBar
         android:id="@+id/view_progress"
-        android:layout_width="0dp"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#16ff5722" />
+        android:progressDrawable="@drawable/basic_play_progress_bg" />
 
 </RelativeLayout>

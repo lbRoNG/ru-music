@@ -3,6 +3,7 @@ package com.lbrong.rumusic.presenter.mine;
 import android.Manifest;
 import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.ImageView;
@@ -16,7 +17,10 @@ import com.lbrong.rumusic.common.adapter.SongListAdapter;
 import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.PermissionPageUtils;
+import com.lbrong.rumusic.iface.callback.OnBindPlayServiceSuccess;
 import com.lbrong.rumusic.presenter.base.FragmentPresenter;
+import com.lbrong.rumusic.presenter.home.MainActivity;
+import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.mine.MineDelegate;
 import com.lbrong.rumusic.view.widget.ErrorView;
 import com.tbruyelle.rxpermissions2.RxPermissions;
@@ -34,9 +38,11 @@ import io.reactivex.schedulers.Schedulers;
  * @since 2018/10/18
  */
 public class MineFragment
-       extends FragmentPresenter<MineDelegate>
-       implements BaseQuickAdapter.OnItemClickListener,BaseQuickAdapter.OnItemChildClickListener {
+        extends FragmentPresenter<MineDelegate>
+        implements BaseQuickAdapter.OnItemClickListener, BaseQuickAdapter.OnItemChildClickListener {
 
+    // 播放服务
+    private PlayService playService;
     // 适配器
     private SongListAdapter songAdapter;
 
@@ -54,7 +60,7 @@ public class MineFragment
 
     @Override
     public void onDestroy() {
-        if(songAdapter != null){
+        if (songAdapter != null) {
             songAdapter.clearProgressTimer();
         }
         super.onDestroy();
@@ -63,9 +69,9 @@ public class MineFragment
     @Override
     public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
         Object temp = adapter.getItem(position);
-        if(temp instanceof Song){
-            if(songAdapter != null){
-                if(songAdapter.getPlayingSongPos() != position){
+        if (temp instanceof Song) {
+            if (songAdapter != null) {
+                if (songAdapter.getPlayingSongPos() != position) {
                     // 复位上个播放的歌曲样式
                     songAdapter.resetSongState();
                     // 更新新播放歌曲的样式
@@ -73,7 +79,7 @@ public class MineFragment
                     item.getController().setPlaying(true);
                     songAdapter.setPlayingSongPos(position);
                     // 播放
-                    startPlay();
+                    startPlay(item);
                 } else {
                     // 重新播放
                     songAdapter.setPlayingSongPos(position);
@@ -91,18 +97,18 @@ public class MineFragment
     /**
      * 判断外部存储的权限
      */
-    private void judgePermission(){
+    private void judgePermission() {
         RxPermissions permissions = new RxPermissions(this);
         // 判断是否已有权限
         boolean isGranted = permissions.isGranted(Manifest.permission.READ_EXTERNAL_STORAGE);
-        if(isGranted){
+        if (isGranted) {
             // 已通过授权
             getLocalMusic();
         } else {
             boolean isRevoked = permissions.isRevoked(Manifest.permission.READ_EXTERNAL_STORAGE);
             if (!isRevoked) {
                 // 未申请
-                addDisposable( permissions
+                addDisposable(permissions
                         .request(Manifest.permission.READ_EXTERNAL_STORAGE
                                 , Manifest.permission.WRITE_EXTERNAL_STORAGE)
                         .subscribe(new Consumer<Boolean>() {
@@ -128,7 +134,7 @@ public class MineFragment
     /**
      * 友好提示获取权限
      */
-    private void showPermissionTip(){
+    private void showPermissionTip() {
         new MaterialDialog.Builder(getActivity())
                 .content("允许读取外部存储权限才能获取本地音乐哦!")
                 .positiveColorRes(R.color.colorAccent)
@@ -148,74 +154,114 @@ public class MineFragment
     /**
      * 获取本地音乐
      */
-    private void getLocalMusic(){
+    private void getLocalMusic() {
         addDisposable(
                 Flowable.fromCallable(new Callable<List<Song>>() {
                     @Override
-                    public List<Song> call(){
+                    public List<Song> call() {
                         return MusicHelper.build().getLocalMusic(getActivity());
                     }
                 }).subscribeOn(Schedulers.computation())
                         .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<List<Song>>() {
-                    @Override
-                    public void accept(List<Song> songs){
-                        if(ObjectHelper.requireNonNull(songs)){
-                            viewDelegate.getErrorView().hide();
+                        .subscribe(new Consumer<List<Song>>() {
+                            @Override
+                            public void accept(List<Song> songs) {
+                                if (ObjectHelper.requireNonNull(songs)) {
+                                    viewDelegate.getErrorView().hide();
 
-                            if(songAdapter != null){
-                                songAdapter.setNewData(songs);
-                                return;
-                            }
+                                    if (songAdapter != null) {
+                                        songAdapter.setNewData(songs);
+                                        return;
+                                    }
 
-                            songAdapter = new SongListAdapter(songs){
-                                @Override
-                                protected void asyncCover(final ImageView view,final Song item) {
-                                    addDisposable(
-                                            Flowable.fromCallable(new Callable<Bitmap>() {
-                                                @Override
-                                                public Bitmap call(){
-                                                    return MusicHelper.build().getAlbumArt(item.getUrl(),8);
-                                                }
-                                            }).subscribeOn(Schedulers.io())
-                                                    .observeOn(AndroidSchedulers.mainThread())
-                                                    .subscribe(new Consumer<Bitmap>() {
+                                    songAdapter = new SongListAdapter(songs) {
+                                        @Override
+                                        protected void asyncCover(final ImageView view, final Song item) {
+                                            addDisposable(
+                                                    Flowable.fromCallable(new Callable<Bitmap>() {
                                                         @Override
-                                                        public void accept(Bitmap bitmap){
-                                                            view.setImageBitmap(bitmap);
+                                                        public Bitmap call() {
+                                                            return MusicHelper.build().getAlbumArt(item.getUrl(), 8);
                                                         }
-                                                    })
-                                    );
+                                                    }).subscribeOn(Schedulers.io())
+                                                            .observeOn(AndroidSchedulers.mainThread())
+                                                            .subscribe(new Consumer<Bitmap>() {
+                                                                @Override
+                                                                public void accept(Bitmap bitmap) {
+                                                                    view.setImageBitmap(bitmap);
+                                                                }
+                                                            })
+                                            );
+                                        }
+
+                                        @Override
+                                        protected void seekBarChange(Song item, int progress) {
+                                            super.seekBarChange(item, progress);
+                                            if(playService != null){
+                                                playService.seekTo(progress);
+                                            }
+                                        }
+                                    };
+                                    songAdapter.setOnItemClickListener(MineFragment.this);
+                                    songAdapter.setOnItemChildClickListener(MineFragment.this);
+                                    songAdapter.bindToRecyclerView((RecyclerView) viewDelegate.get(R.id.rv_song_list));
+                                    viewDelegate.setSongListAdapter(songAdapter);
+                                } else {
+                                    ErrorView errorView = (ErrorView) viewDelegate.getErrorView();
+                                    errorView.setText("没有本地音乐哦，快去搜索添加吧！").show();
                                 }
-                            };
-                            songAdapter.setOnItemClickListener(MineFragment.this);
-                            songAdapter.setOnItemChildClickListener(MineFragment.this);
-                            songAdapter.bindToRecyclerView((RecyclerView) viewDelegate.get(R.id.rv_song_list));
-                            viewDelegate.setSongListAdapter(songAdapter);
-                        } else {
-                            ErrorView errorView = (ErrorView) viewDelegate.getErrorView();
-                            errorView.setText("没有本地音乐哦，快去搜索添加吧！").show();
-                        }
-                    }
-                })
+                            }
+                        })
         );
+    }
+
+    /**
+     * 获取依附的Activity
+     */
+    private @Nullable
+    MainActivity getMain(){
+        if(getActivity() instanceof MainActivity){
+            return (MainActivity) getActivity();
+        }
+        return null;
     }
 
     /**
      * 开始播放
      */
-    private void startPlay(){
-        if(songAdapter != null){
+    private void startPlay(final Song item) {
+        final MainActivity activity = getMain();
+        if (songAdapter != null && activity != null) {
+            // 复位进度，重新开始播放
             songAdapter.startProgressTimer(0);
+            // 判断服务是否绑定,没绑定先绑定服务
+            if (playService == null) {
+                activity.bindPlayService(new OnBindPlayServiceSuccess() {
+                    @Override
+                    public void success(PlayService service) {
+                        // 开始播放
+                        playService = service;
+                        service.setAudio(item);
+                        service.playAudio();
+                        activity.setPlayController();
+                    }
+                });
+            } else {
+                // 播放音乐
+                playService.setAudio(item);
+                playService.playAudio();
+                activity.setPlayController();
+            }
         }
     }
 
     /**
      * 重新播放
      */
-    private void replay(){
-        if(songAdapter != null){
+    private void replay() {
+        if (songAdapter != null && playService != null) {
             songAdapter.startProgressTimer(0);
+            playService.rePlay();
         }
     }
 

@@ -5,14 +5,13 @@ import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.bean.Song;
-import com.lbrong.rumusic.common.utils.DensityUtils;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 
 import java.lang.ref.WeakReference;
@@ -28,6 +27,7 @@ import io.reactivex.schedulers.Schedulers;
 /**
  * @author lbRoNG
  * @since 2018/10/19
+ * 我的tab播放列表适配器
  */
 public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
     // 正在播放的Song在适配器中的位置
@@ -38,9 +38,9 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
         super(R.layout.item_basics_song,data);
     }
 
-    protected void asyncCover(ImageView view,Song item){
+    protected void asyncCover(ImageView view,Song item){}
 
-    }
+    protected void seekBarChange(Song item,int progress){}
 
     public int getPlayingSongPos() {
         return playingSongPos;
@@ -119,20 +119,16 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
                     .subscribeOn(Schedulers.computation())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Consumer<Long>() {
-                        View view,view_;
-                        int totalWidth;
+                        View view;
+                        ProgressBar view_;
                         @Override
                         public void accept(Long progress){
-                            if(totalWidth == 0){
-                                totalWidth = DensityUtils.getScreenWidth();
-                            }
-
                             if(view == null){
                                 view = getViewByPosition(playingSongPos,R.id.skb_song);
                             }
 
                             if(view_ == null){
-                                view_ = getViewByPosition(playingSongPos,R.id.view_progress);
+                                view_ = (ProgressBar) getViewByPosition(playingSongPos,R.id.view_progress);
                             }
 
                             if(view instanceof SeekBar){
@@ -141,9 +137,7 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
                             }
 
                             if(view_ != null){
-                                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) view_.getLayoutParams();
-                                params.width = (int) (totalWidth * progress / max);
-                                view_.setLayoutParams(params);
+                                view_.setProgress(Integer.parseInt(progress+""));
                             }
 
                         }
@@ -152,7 +146,7 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
     }
 
     @Override
-    protected void convert(BaseViewHolder helper, Song item) {
+    protected void convert(BaseViewHolder helper,final Song item) {
         // cover
         WeakReference<Bitmap> wr = item.getBitmap();
         if(ObjectHelper.requireNonNull(wr)){
@@ -191,14 +185,19 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
                 isPlaying ? R.dimen.song_item_playing_height : R.dimen.song_item_height);
         helper.itemView.setLayoutParams(layoutParams);
         // 设置进度条
+        int max = (int) (item.getDuration() / 1000);
+        ProgressBar pb = helper.getView(R.id.view_progress);
+        pb.setMax(max);
+        pb.setProgress(0);
         SeekBar bar = helper.getView(R.id.skb_song);
-        bar.setMax((int) (item.getDuration() / 1000));
+        bar.setMax(max);
         bar.setProgress(0);
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if(fromUser){
                     startProgressTimer(progress);
+                    seekBarChange(item,progress * 1000);
                 }
             }
 

@@ -9,6 +9,7 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.View;
 
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.adapter.TitleFragmentPagerAdapter;
@@ -16,6 +17,7 @@ import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.presenter.home.MainActivity;
 import com.lbrong.rumusic.presenter.mine.MineFragment;
 import com.lbrong.rumusic.view.base.AppDelegate;
+import com.lbrong.rumusic.view.widget.PlayControllerView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -100,6 +102,29 @@ public class MainDelegate extends AppDelegate {
         pager.setOffscreenPageLimit(3);
         pager.setAdapter(pagerAdapter);
         tabs.setupWithViewPager(pager);
+    }
+
+    /**
+     * 初始化控制器
+     */
+    public void initController(String singer, String songName, int progress,int max){
+        PlayControllerView view = get(R.id.play_controller);
+        view.setAudio(singer,songName,progress,max);
+    }
+
+    public void setControllerProgress(int progress){
+        PlayControllerView view = get(R.id.play_controller);
+        view.setProgress(progress);
+    }
+
+    public void showController(){
+        PlayControllerView view = get(R.id.play_controller);
+        view.setVisibility(View.VISIBLE);
+    }
+
+    public void hideController(){
+        PlayControllerView view = get(R.id.play_controller);
+        view.setVisibility(View.GONE);
     }
 
 }

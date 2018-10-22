@@ -36,10 +36,11 @@
 
     <include layout="@layout/content_main" />
 
-    <include
-        layout="@layout/include_play_controller"
+    <com.lbrong.rumusic.view.widget.PlayControllerView
+        android:id="@+id/play_controller"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/play_controller_height"
-        android:layout_gravity="bottom" />
+        android:layout_gravity="bottom"
+        android:visibility="gone"
+        android:layout_height="@dimen/play_controller_height"/>
 
 </android.support.design.widget.CoordinatorLayout>

@@ -32,6 +32,8 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <service android:name=".service.PlayService" android:exported="false"/>
+
         <activity
             android:name=".presenter.home.MainActivity"
             android:screenOrientation="portrait">
