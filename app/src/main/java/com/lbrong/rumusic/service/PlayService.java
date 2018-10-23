@@ -11,6 +11,9 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import com.lbrong.rumusic.bean.Song;
+import com.lbrong.rumusic.common.event.EventStringKey;
+import com.lbrong.rumusic.common.utils.SendEventUtils;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -85,7 +88,14 @@ public class PlayService extends Service {
                 mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                     @Override
                     public void onPrepared(MediaPlayer mp) {
+                        SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PLAY);
                         mPlayer.start();
+                    }
+                });
+                mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mp) {
+                        SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_COMPLETE);
                     }
                 });
             } catch (IllegalStateException e){
@@ -107,6 +117,7 @@ public class PlayService extends Service {
      */
     public void rePlay(){
         if(mPlayer != null){
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_RE_PLAY);
             if(mPlayer.isPlaying()){
                 seekTo(0);
             } else {
@@ -120,6 +131,7 @@ public class PlayService extends Service {
      */
     public void seekTo(int mesc){
         if(mPlayer != null){
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_SEEK_TO);
             mPlayer.seekTo(mesc);
         }
     }
@@ -129,7 +141,18 @@ public class PlayService extends Service {
      */
     public void pause(){
         if(mPlayer != null && mPlayer.isPlaying()){
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PAUSE);
             mPlayer.pause();
+        }
+    }
+
+    /**
+     * 暂停播放
+     */
+    public void continuePlay(){
+        if(mPlayer != null && !mPlayer.isPlaying()){
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_CONTINUE_PLAY);
+            mPlayer.start();
         }
     }
 
@@ -138,6 +161,7 @@ public class PlayService extends Service {
      */
     public void stop(){
         if(mPlayer != null && mPlayer.isPlaying()){
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
             mPlayer.stop();
         }
     }
@@ -160,6 +184,16 @@ public class PlayService extends Service {
             return mPlayer.getCurrentPosition();
         }
         return 0;
+    }
+
+    /**
+     * 是否正在播放
+     */
+    public boolean isPlaying(){
+        if(mPlayer != null){
+            return mPlayer.isPlaying();
+        }
+        return false;
     }
 
     /**

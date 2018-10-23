@@ -1,4 +1,4 @@
-package com.tengyu.mmd.view.widget;
+package com.lbrong.rumusic.view.widget;
 
 import android.content.Context;
 import android.support.v4.widget.SwipeRefreshLayout;

@@ -1,5 +1,6 @@
 package com.lbrong.rumusic.view.play;
 
+import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.view.base.AppDelegate;
 
 /**
@@ -7,4 +8,8 @@ import com.lbrong.rumusic.view.base.AppDelegate;
  * @since 2018/10/23
  */
 public class PlayDelegate extends AppDelegate {
+    @Override
+    public int getRootLayoutId() {
+        return R.layout.activity_play;
+    }
 }

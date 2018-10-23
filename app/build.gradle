@@ -76,6 +76,7 @@ dependencies {
     implementation deps.permissions.core
     implementation deps.db.core
     implementation deps.progressmanager.core
+    implementation deps.live_event_bus.core
     implementation deps.bugly.sdk
     implementation deps.bugly.ndk
 }

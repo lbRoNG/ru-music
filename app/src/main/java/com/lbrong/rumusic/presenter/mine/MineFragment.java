@@ -1,22 +1,27 @@
 package com.lbrong.rumusic.presenter.mine;
 
 import android.Manifest;
+import android.arch.lifecycle.Observer;
 import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
-
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.bean.Song;
 import com.lbrong.rumusic.common.adapter.SongListAdapter;
+import com.lbrong.rumusic.common.event.EventStringKey;
+import com.lbrong.rumusic.common.event.home.PageRefresh;
+import com.lbrong.rumusic.common.net.rx.subscriber.DefaultSubscriber;
 import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.PermissionPageUtils;
+import com.lbrong.rumusic.common.utils.SendEventUtils;
 import com.lbrong.rumusic.iface.callback.OnBindPlayServiceSuccess;
 import com.lbrong.rumusic.presenter.base.FragmentPresenter;
 import com.lbrong.rumusic.presenter.home.MainActivity;
@@ -24,10 +29,8 @@ import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.mine.MineDelegate;
 import com.lbrong.rumusic.view.widget.ErrorView;
 import com.tbruyelle.rxpermissions2.RxPermissions;
-
 import java.util.List;
 import java.util.concurrent.Callable;
-
 import io.reactivex.Flowable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
@@ -39,7 +42,7 @@ import io.reactivex.schedulers.Schedulers;
  */
 public class MineFragment
         extends FragmentPresenter<MineDelegate>
-        implements BaseQuickAdapter.OnItemClickListener, BaseQuickAdapter.OnItemChildClickListener {
+        implements BaseQuickAdapter.OnItemClickListener, BaseQuickAdapter.OnItemChildClickListener{
 
     // 播放服务
     private PlayService playService;
@@ -56,6 +59,79 @@ public class MineFragment
         super.init();
         // 获取权限
         judgePermission();
+    }
+
+    @Override
+    protected void bindEvenListener() {
+        super.bindEvenListener();
+        viewDelegate.setOnListScrollListener(new OnListScrollListener());
+    }
+
+    @Override
+    protected void initLiveDataObserver() {
+        super.initLiveDataObserver();
+        // 下拉刷新监听
+        SendEventUtils.observe(EventStringKey.Home.PAGE_REFRESH,PageRefresh.class)
+                .observe(this, new Observer<PageRefresh>() {
+                    @Override
+                    public void onChanged(@Nullable PageRefresh pageRefresh) {
+                        if(pageRefresh != null && pageRefresh.getIndex() == 0){
+                            //getLocalMusic();
+                            if(getMain() != null){
+                                getMain().hideRefresh();
+                            }
+                        }
+                    }
+                });
+        // 播放状态改变监听
+        SendEventUtils.observe(EventStringKey.Music.MUSIC_STATE,String.class)
+                .observe(this, new Observer<String>() {
+                    @Override
+                    public void onChanged(@Nullable String s) {
+                        if(!TextUtils.isEmpty(s)){
+                            switch (s){
+                                case EventStringKey.Music.MUSIC_PLAY:
+                                    break;
+                                case EventStringKey.Music.MUSIC_CONTINUE_PLAY:
+                                    if(songAdapter != null && playService != null){
+                                        int start = playService.getCurrentPosition() / 1000;
+                                        songAdapter.startProgressTimer(start);
+                                    }
+                                    break;
+                                case EventStringKey.Music.MUSIC_PAUSE:
+                                    if(songAdapter != null){
+                                        songAdapter.clearProgressTimer();
+                                    }
+                                    break;
+                                case EventStringKey.Music.MUSIC_STOP:
+                                    if(songAdapter != null){
+                                        songAdapter.clearProgressTimer();
+                                        songAdapter.resetSongState();
+                                    }
+                                    break;
+                                case EventStringKey.Music.MUSIC_RE_PLAY:
+                                    break;
+                                case EventStringKey.Music.MUSIC_SEEK_TO:
+                                    if(songAdapter != null && playService != null){
+                                        int start = playService.getCurrentPosition() / 1000;
+                                        songAdapter.startProgressTimer(start);
+                                    }
+                                    break;
+                                case EventStringKey.Music.MUSIC_COMPLETE:
+                                    if(songAdapter != null){
+                                        int playing = songAdapter.getPlayingSongPos();
+                                        int next = playing + 1;
+                                        if(next >= songAdapter.getData().size()){
+                                            next = 0;
+                                        }
+                                        View view = songAdapter.getViewByPosition(next,R.id.rl_root);
+                                        songAdapter.setOnItemClick(view,next);
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                });
     }
 
     @Override
@@ -77,12 +153,12 @@ public class MineFragment
                     // 更新新播放歌曲的样式
                     Song item = (Song) temp;
                     item.getController().setPlaying(true);
-                    songAdapter.setPlayingSongPos(position);
+                    songAdapter.updatePlayingSongPos(position);
                     // 播放
                     startPlay(item);
                 } else {
                     // 重新播放
-                    songAdapter.setPlayingSongPos(position);
+                    songAdapter.updatePlayingSongPos(position);
                     replay();
                 }
             }
@@ -161,11 +237,27 @@ public class MineFragment
                     public List<Song> call() {
                         return MusicHelper.build().getLocalMusic(getActivity());
                     }
-                }).subscribeOn(Schedulers.computation())
+                }).subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(new Consumer<List<Song>>() {
+                        .subscribeWith(new DefaultSubscriber<List<Song>>(){
                             @Override
-                            public void accept(List<Song> songs) {
+                            public void onFinish() {
+                                super.onFinish();
+                                if(getMain() != null){
+                                    getMain().hideRefresh();
+                                }
+                            }
+
+                            @Override
+                            protected void onStart() {
+                                super.onStart();
+                                if(getMain() != null){
+                                    getMain().showRefresh();
+                                }
+                            }
+
+                            @Override
+                            public void onNext(List<Song> songs) {
                                 if (ObjectHelper.requireNonNull(songs)) {
                                     viewDelegate.getErrorView().hide();
 
@@ -262,6 +354,32 @@ public class MineFragment
         if (songAdapter != null && playService != null) {
             songAdapter.startProgressTimer(0);
             playService.rePlay();
+        }
+    }
+
+    /**
+     * 滑动监听
+     * 保证正在播放的歌曲item样式，不可见时不要计时，可见时再计时
+     */
+    private class OnListScrollListener extends RecyclerView.OnScrollListener{
+        @Override
+        public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+            super.onScrolled(recyclerView, dx, dy);
+            if(songAdapter != null && playService != null){
+                int start = viewDelegate.getLayoutManager().findFirstVisibleItemPosition();
+                int end = viewDelegate.getLayoutManager().findLastVisibleItemPosition();
+                int playing = songAdapter.getPlayingSongPos();
+                if(playing >= start && playing <= end){
+                    int s = playService.getCurrentPosition() / 1000;
+                    if(!playService.isPlaying()){
+                        songAdapter.setItemProgress(s);
+                    } else {
+                        songAdapter.startProgressTimer(s);
+                    }
+                } else {
+                    songAdapter.clearProgressTimer();
+                }
+            }
         }
     }
 

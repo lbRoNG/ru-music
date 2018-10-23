@@ -7,17 +7,14 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
-
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.bean.Song;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
-
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -46,7 +43,10 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
         return playingSongPos;
     }
 
-    public void setPlayingSongPos(int pos) {
+    /**
+     * 更新新的播放item位置
+     */
+    public void updatePlayingSongPos(int pos) {
         // 上个
         notifyItemChanged(playingSongPos);
         // 更新
@@ -85,6 +85,18 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
     public void clearProgressTimer(){
         if(timer != null && !timer.isDisposed()){
             timer.dispose();
+        }
+    }
+
+    /**
+     * 设置item的进度
+     */
+    public void setItemProgress(int progress){
+        SeekBar view = (SeekBar) getViewByPosition(playingSongPos,R.id.skb_song);
+        ProgressBar view_ = (ProgressBar) getViewByPosition(playingSongPos,R.id.view_progress);
+        if(view != null && view_ != null){
+            view.setProgress(progress);
+            view_.setProgress(progress);
         }
     }
 
@@ -168,7 +180,6 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
         boolean showBitrate = bitrate >= 320;
         if(showBitrate){
             helper.setImageResource(R.id.iv_bitrate,bitrate > 350 ? R.drawable.ic_mine_song_sq : R.drawable.ic_mine_song_hq);
-
         }
         helper.getView(R.id.iv_bitrate).setVisibility(showBitrate ? View.VISIBLE : View.GONE);
         // 进度条是否显示
@@ -188,10 +199,8 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
         int max = (int) (item.getDuration() / 1000);
         ProgressBar pb = helper.getView(R.id.view_progress);
         pb.setMax(max);
-        pb.setProgress(0);
         SeekBar bar = helper.getView(R.id.skb_song);
         bar.setMax(max);
-        bar.setProgress(0);
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {

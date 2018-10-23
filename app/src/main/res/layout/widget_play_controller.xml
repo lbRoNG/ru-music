@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="@dimen/play_controller_height"
-    android:background="@color/colorAccent">
+    android:background="@color/colorAccent"
+    android:clickable="true"
+    android:focusable="true">
 
     <ProgressBar
         android:id="@+id/progress"
@@ -14,15 +17,43 @@
 
     <ImageView
         android:id="@+id/iv_play"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
         android:layout_centerVertical="true"
         android:layout_marginStart="@dimen/dp16"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:clickable="true"
         android:contentDescription="@null"
         android:focusable="true"
-        android:src="@drawable/ic_play_controller_btn" />
+        android:src="@drawable/ic_pause_controller_btn"
+        android:tag="play" />
+
+    <ImageView
+        android:id="@+id/iv_go"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:layout_marginEnd="@dimen/dp16"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:contentDescription="@null"
+        android:focusable="true"
+        android:src="@drawable/ic_go_controller_btn" />
+
+    <ImageView
+        android:id="@+id/iv_next"
+        android:layout_width="30dp"
+        android:layout_height="28dp"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="@dimen/dp8"
+        android:layout_toEndOf="@id/iv_play"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:contentDescription="@null"
+        android:focusable="true"
+        android:src="@drawable/ic_next_controller_btn"
+        android:tag="play" />
 
     <TextView
         android:id="@+id/tv_singer"
@@ -30,7 +61,7 @@
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
         android:layout_marginStart="@dimen/dp16"
-        android:layout_toEndOf="@id/iv_play"
+        android:layout_toEndOf="@id/iv_next"
         android:maxLength="6"
         android:singleLine="true"
         android:textColor="@android:color/white"
@@ -43,6 +74,7 @@
         android:layout_centerVertical="true"
         android:layout_marginStart="@dimen/dp16"
         android:layout_marginEnd="@dimen/dp16"
+        android:layout_toStartOf="@id/iv_go"
         android:layout_toEndOf="@id/tv_singer"
         android:ellipsize="marquee"
         android:marqueeRepeatLimit="marquee_forever"

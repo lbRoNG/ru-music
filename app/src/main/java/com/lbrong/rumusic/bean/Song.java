@@ -3,6 +3,7 @@ package com.lbrong.rumusic.bean;
 import android.graphics.Bitmap;
 
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 
 /**
  * @author lbRoNG
@@ -21,6 +22,22 @@ public class Song {
     private int bitrate;
     private PlayController controller;
     private WeakReference<Bitmap> bitmap;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Song)) return false;
+        Song song = (Song) o;
+        return getId() == song.getId() &&
+                getAlbumId() == song.getAlbumId() &&
+                getSize() == song.getSize() &&
+                getDuration() == song.getDuration();
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId(), getAlbumId(), getSize(), getDuration());
+    }
 
     public class PlayController{
         private boolean playing;

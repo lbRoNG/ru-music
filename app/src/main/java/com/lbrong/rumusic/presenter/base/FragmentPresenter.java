@@ -81,11 +81,14 @@ public abstract class FragmentPresenter<T extends IDelegate> extends Fragment {
         viewDelegate.initWidget();
         bindEvenListener();
         init();
+        initLiveDataObserver();
     }
 
     protected void init(){ }
 
     protected void bindEvenListener() { }
+
+    protected void initLiveDataObserver(){}
 
     protected void startWaitAllTask(int taskCount){
         cancelWaitTask();

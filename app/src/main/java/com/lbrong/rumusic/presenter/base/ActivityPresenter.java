@@ -80,11 +80,12 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
         viewDelegate.initWidget();
         bindEvenListener();
         init();
+        initLiveDataObserver();
     }
 
-    protected void bindEvenListener() {
+    protected void bindEvenListener() { }
 
-    }
+    protected void initLiveDataObserver(){}
 
     protected void setDensityCompat(){
         DensityUtils.setDefault(this);

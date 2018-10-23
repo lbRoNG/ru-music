@@ -17,6 +17,8 @@ package com.lbrong.rumusic.view.base;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.support.annotation.StringRes;
+import android.support.design.widget.Snackbar;
 import android.support.v7.widget.Toolbar;
 import android.text.TextWatcher;
 import android.util.SparseArray;
@@ -114,8 +116,16 @@ public abstract class AppDelegate implements IDelegate {
         Toast.makeText(rootView.getContext(), msg, Toast.LENGTH_SHORT).show();
     }
 
-    public void toast(int strId) {
+    public void toast(@StringRes int strId) {
         Toast.makeText(rootView.getContext(), strId, Toast.LENGTH_SHORT).show();
+    }
+
+    public void snack(View root,CharSequence msg) {
+        Snackbar.make(root, msg, Snackbar.LENGTH_SHORT).show();
+    }
+
+    public void snack(View root,@StringRes int strId) {
+        Snackbar.make(root, strId, Snackbar.LENGTH_SHORT).show();
     }
 
     public <T extends Activity> T getActivity() {
