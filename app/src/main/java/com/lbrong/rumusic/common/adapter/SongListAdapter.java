@@ -2,6 +2,7 @@ package com.lbrong.rumusic.common.adapter;
 
 import android.graphics.Bitmap;
 import android.support.annotation.Nullable;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.ImageView;
@@ -159,6 +160,7 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
 
     @Override
     protected void convert(BaseViewHolder helper,final Song item) {
+        boolean isPlaying = item.getController().isPlaying();
         // cover
         WeakReference<Bitmap> wr = item.getBitmap();
         if(ObjectHelper.requireNonNull(wr)){
@@ -175,6 +177,10 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
         // info
         helper.setText(R.id.tv_song_name,item.getTitle());
         helper.setText(R.id.tv_singer,item.getArtist());
+        helper.setTextColor(R.id.tv_song_name,ContextCompat.getColor(
+                mContext,isPlaying ? R.color.colorAccent : R.color.textPrimary));
+        helper.setTextColor(R.id.tv_singer,ContextCompat.getColor(
+                mContext,isPlaying ? R.color.colorAccent : R.color.textSecondary));
         // bitrate
         int bitrate = item.getBitrate();
         boolean showBitrate = bitrate >= 320;
@@ -183,8 +189,6 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
         }
         helper.getView(R.id.iv_bitrate).setVisibility(showBitrate ? View.VISIBLE : View.GONE);
         // 进度条是否显示
-        boolean isPlaying = item.getController().isPlaying();
-        // 记录
         if(isPlaying){
             playingSongPos = helper.getAdapterPosition();
         }

@@ -3,12 +3,15 @@ package com.lbrong.rumusic.presenter.mine;
 import android.Manifest;
 import android.arch.lifecycle.Observer;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
+
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.chad.library.adapter.base.BaseQuickAdapter;
@@ -18,6 +21,7 @@ import com.lbrong.rumusic.common.adapter.SongListAdapter;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.event.home.PageRefresh;
 import com.lbrong.rumusic.common.net.rx.subscriber.DefaultSubscriber;
+import com.lbrong.rumusic.common.utils.ImageUtils;
 import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.PermissionPageUtils;
@@ -29,8 +33,10 @@ import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.mine.MineDelegate;
 import com.lbrong.rumusic.view.widget.ErrorView;
 import com.tbruyelle.rxpermissions2.RxPermissions;
+
 import java.util.List;
 import java.util.concurrent.Callable;
+
 import io.reactivex.Flowable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
@@ -48,6 +54,8 @@ public class MineFragment
     private PlayService playService;
     // 适配器
     private SongListAdapter songAdapter;
+    // 当前歌单名称
+    public final static String SONGLIST = "我的音乐";
 
     @Override
     protected Class<MineDelegate> getDelegateClass() {
@@ -153,6 +161,7 @@ public class MineFragment
                     // 更新新播放歌曲的样式
                     Song item = (Song) temp;
                     item.getController().setPlaying(true);
+                    item.getController().setIntoSongList(SONGLIST);
                     songAdapter.updatePlayingSongPos(position);
                     // 播放
                     startPlay(item);
@@ -273,7 +282,13 @@ public class MineFragment
                                                     Flowable.fromCallable(new Callable<Bitmap>() {
                                                         @Override
                                                         public Bitmap call() {
-                                                            return MusicHelper.build().getAlbumArt(item.getUrl(), 8);
+                                                            Bitmap cover = MusicHelper.build().getAlbumArt(item.getUrl(), 0);
+                                                            if(cover == null){
+                                                                Drawable drawable = ContextCompat.getDrawable(
+                                                                        getActivity(),R.drawable.ic_mine_song_default_cover);
+                                                                cover = ImageUtils.drawableToBitmap(drawable);
+                                                            }
+                                                            return cover;
                                                         }
                                                     }).subscribeOn(Schedulers.io())
                                                             .observeOn(AndroidSchedulers.mainThread())
@@ -291,6 +306,7 @@ public class MineFragment
                                             super.seekBarChange(item, progress);
                                             if(playService != null){
                                                 playService.seekTo(progress);
+                                                playService.continuePlay();
                                             }
                                         }
                                     };

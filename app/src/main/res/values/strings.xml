@@ -22,6 +22,8 @@
     <string name="main_tab_song_list">歌单</string>
     <string name="main_tab_fm">FM</string>
 
+    <string name="play_detail_song_list">歌单</string>
+
 
 
 </resources>

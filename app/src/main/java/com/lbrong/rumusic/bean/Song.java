@@ -41,7 +41,7 @@ public class Song {
 
     public class PlayController{
         private boolean playing;
-        private int current;
+        private String intoSongList;
 
         public boolean isPlaying() {
             return playing;
@@ -51,12 +51,12 @@ public class Song {
             this.playing = playing;
         }
 
-        public int getCurrent() {
-            return current;
+        public String getIntoSongList() {
+            return intoSongList;
         }
 
-        public void setCurrent(int current) {
-            this.current = current;
+        public void setIntoSongList(String intoSongList) {
+            this.intoSongList = intoSongList;
         }
     }
 
