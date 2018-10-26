@@ -10,11 +10,23 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
-import com.lbrong.rumusic.bean.Song;
+import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
+import com.lbrong.rumusic.common.utils.MusicHelper;
+import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
+import com.lbrong.rumusic.common.utils.SettingHelper;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Callable;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * @author lbRoNG
@@ -23,7 +35,14 @@ import java.io.IOException;
  */
 public class PlayService extends Service {
     private MediaPlayer mPlayer;
+    // 正在播放的音乐
     private Song currentAudio;
+    // 播放列表id合集
+    private List<Long> songListIds;
+    // 播放列表随机id合集
+    private List<Long> randomSongListIds;
+    // 任务集合
+    private CompositeDisposable compositeDisposable;
 
     public class PlayBinder extends Binder {
         public PlayService getService(){
@@ -41,6 +60,7 @@ public class PlayService extends Service {
     public void onCreate() {
         super.onCreate();
         if(mPlayer == null){
+            compositeDisposable = new CompositeDisposable();
             mPlayer = new MediaPlayer();
             mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         }
@@ -56,6 +76,8 @@ public class PlayService extends Service {
         mPlayer.stop();
         mPlayer.release();
         mPlayer = null;
+        compositeDisposable.clear();
+        compositeDisposable = null;
         super.onDestroy();
     }
 
@@ -67,9 +89,13 @@ public class PlayService extends Service {
             currentAudio = audio;
 
             if(mPlayer != null && !TextUtils.isEmpty(currentAudio.getUrl())){
-                mPlayer.reset();
-                mPlayer.setDataSource(getApplicationContext()
-                        ,Uri.fromFile(new File(currentAudio.getUrl())));
+                try {
+                    mPlayer.reset();
+                    mPlayer.setDataSource(getApplicationContext()
+                            ,Uri.fromFile(new File(currentAudio.getUrl())));
+                } catch (IllegalStateException e){
+                    e.printStackTrace();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -87,14 +113,22 @@ public class PlayService extends Service {
                 mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                     @Override
                     public void onPrepared(MediaPlayer mp) {
-                        SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PLAY);
+                        // 准备完毕开始播放
                         mPlayer.start();
+                        // 发送播放音乐的通知
+                        SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PLAY);
                     }
                 });
+
                 mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     @Override
                     public void onCompletion(MediaPlayer mp) {
+                        // 发送播放完成的通知
                         SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_COMPLETE);
+                        // 查看配置是否需要自动播放
+                        if(SettingHelper.build().isAutoNext()){
+                            next(false);
+                        }
                     }
                 });
             } catch (IllegalStateException e){
@@ -116,12 +150,12 @@ public class PlayService extends Service {
      */
     public void rePlay(){
         if(mPlayer != null){
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_RE_PLAY);
             if(mPlayer.isPlaying()){
-                seekTo(0);
+                mPlayer.seekTo(0);
             } else {
                 mPlayer.start();
             }
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_RE_PLAY);
         }
     }
 
@@ -130,8 +164,8 @@ public class PlayService extends Service {
      */
     public void seekTo(int mesc){
         if(mPlayer != null){
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_SEEK_TO);
             mPlayer.seekTo(mesc);
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_SEEK_TO);
         }
     }
 
@@ -140,8 +174,8 @@ public class PlayService extends Service {
      */
     public void pause(){
         if(mPlayer != null && mPlayer.isPlaying()){
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PAUSE);
             mPlayer.pause();
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PAUSE);
         }
     }
 
@@ -150,8 +184,8 @@ public class PlayService extends Service {
      */
     public void continuePlay(){
         if(mPlayer != null && !mPlayer.isPlaying()){
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_CONTINUE_PLAY);
             mPlayer.start();
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_CONTINUE_PLAY);
         }
     }
 
@@ -160,8 +194,8 @@ public class PlayService extends Service {
      */
     public void stop(){
         if(mPlayer != null && mPlayer.isPlaying()){
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
             mPlayer.stop();
+            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
         }
     }
 
@@ -196,10 +230,112 @@ public class PlayService extends Service {
     }
 
     /**
+     * 下一曲
+     * 根据当前播放列表
+     */
+    public void next(final boolean fromUser){
+        compositeDisposable.add(
+                Observable.fromCallable(new Callable<Boolean>() {
+                    @Override
+                    public Boolean call() {
+                        if(ObjectHelper.requireNonNull(songListIds)
+                                && currentAudio != null && mPlayer != null){
+                            // 停止原来的播放
+                            mPlayer.stop();
+                            // 当前id
+                            long id = currentAudio.getId();
+                            Song song = MusicHelper.build().getNext(songListIds,randomSongListIds,id,fromUser);
+                            if(song != null){
+                                if(song.getId() == 0){
+                                    SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_ALL_COMPLETE);
+                                } else {
+                                    currentAudio = song;
+                                    setAudio(currentAudio);
+                                    playAudio();
+                                }
+                            } else {
+                                // 找不到对应歌曲，停止播放
+                                SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
+                            }
+                        }
+                        return true;
+                    }
+                }).subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Consumer<Boolean>() {
+                            @Override
+                            public void accept(Boolean aBoolean){}
+                        })
+        );
+    }
+
+    /**
+     * 上一曲
+     * 根据当前播放列表
+     */
+    public void previous(){
+        compositeDisposable.add(
+                Observable.fromCallable(new Callable<Boolean>() {
+                    @Override
+                    public Boolean call(){
+                        if(ObjectHelper.requireNonNull(songListIds)
+                                && currentAudio != null && mPlayer != null){
+                            // 停止原来的播放
+                            mPlayer.stop();
+                            // 当前id
+                            long id = currentAudio.getId();
+                            Song song = MusicHelper.build().getPrevious(songListIds,randomSongListIds,id);
+                            if(song != null){
+                                if(song.getId() == 0){
+                                    SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_ALL_COMPLETE);
+                                } else {
+                                    currentAudio = song;
+                                    setAudio(currentAudio);
+                                    playAudio();
+                                }
+                            } else {
+                                // 找不到对应歌曲，停止播放
+                                SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
+                            }
+                        }
+                        return true;
+                    }
+                }).subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Consumer<Boolean>() {
+                            @Override
+                            public void accept(Boolean aBoolean){}
+                        })
+        );
+    }
+
+    /**
      * 获取当前播放的音乐
      */
     public Song getCurrentAudio(){
         return currentAudio;
     }
 
+    /**
+     * 设置播放列表id合集
+     */
+    public void setSongListIds(List<Long> songListIds){
+        this.songListIds = songListIds;
+        setRandomSongListIds();
+    }
+
+    /**
+     * 重新随机
+     */
+    public void setRandomSongListIds(){
+        if(ObjectHelper.requireNonNull(songListIds)){
+            this.randomSongListIds = new ArrayList<>();
+            Collections.copy(songListIds,randomSongListIds);
+            Collections.shuffle(randomSongListIds);
+        }
+    }
+
+    public List<Long> getSongListIds() {
+        return songListIds;
+    }
 }

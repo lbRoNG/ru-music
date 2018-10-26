@@ -1,11 +1,18 @@
 package com.lbrong.rumusic.application;
 
 import android.app.Application;
+
 import com.lbrong.rumusic.BuildConfig;
+import com.lbrong.rumusic.common.type.PlayMethodEnum;
 import com.lbrong.rumusic.common.utils.DensityUtils;
+import com.lbrong.rumusic.common.utils.SettingHelper;
 import com.tencent.bugly.crashreport.CrashReport;
+import com.tencent.mmkv.MMKV;
+
 import org.litepal.LitePal;
+
 import java.util.concurrent.TimeUnit;
+
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.functions.Consumer;
@@ -32,6 +39,11 @@ public class AppContext extends Application {
             INSTANCE = this;
         }
 
+        initMMKV();
+
+        // 初始化默认配置
+        initSetting();
+
         // 设置适配
         DensityUtils.setDensity(this);
 
@@ -56,14 +68,27 @@ public class AppContext extends Application {
         super.onTerminate();
     }
 
-    /**
-     * 加载数据库
-     */
+    private void initSetting(){
+        if(SettingHelper.build().isFirst()){
+            SettingHelper.build()
+                    // 第一次打开
+                    .first()
+                    // 播放方法
+                    .playMethod(PlayMethodEnum.ORDER)
+                    // 自动播放下一首
+                    .autoNext(true);
+        }
+    }
+
     private void initDB(){
         LitePal.initialize(INSTANCE);
     }
 
     private void initBugly(){
         CrashReport.initCrashReport(INSTANCE, BuildConfig.BUGLYAPPID, BuildConfig.DEBUG);
+    }
+
+    private void initMMKV(){
+        MMKV.initialize(this);
     }
 }

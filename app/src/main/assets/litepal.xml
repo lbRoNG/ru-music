@@ -3,6 +3,6 @@
     <dbname value="ru_music" />
     <version value="1" />
     <list>
-
+        <mapping class="com.lbrong.rumusic.common.db.table.Song" />
     </list>
 </litepal>

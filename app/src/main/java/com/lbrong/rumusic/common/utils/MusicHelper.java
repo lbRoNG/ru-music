@@ -10,7 +10,10 @@ import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import com.lbrong.rumusic.bean.Song;
+import com.lbrong.rumusic.common.db.table.Song;
+import com.lbrong.rumusic.common.type.PlayMethodEnum;
+
+import org.litepal.LitePal;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -96,8 +99,7 @@ public final class MusicHelper {
      * @param url mp3地址
      * @param ratio 压缩比例
      */
-    public @Nullable
-    Bitmap getAlbumArt(String url, int ratio) {
+    public @Nullable Bitmap getAlbumArt(String url, int ratio) {
         try {
             FileInputStream inputStream = new FileInputStream(new File(url).getAbsolutePath());
             MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
@@ -123,4 +125,92 @@ public final class MusicHelper {
         return (int) (size / duration);
     }
 
+    /**
+     * 根据播放方法和播放列表计算出下一首要播放的歌曲
+     * @param ids 播放列表ids
+     * @param randomIds 播放列表随机ids
+     * @param currentId 当前播放的id
+     * @param fromUser 是否是用户主动切换
+     */
+    public @Nullable Song getNext(List<Long> ids, List<Long> randomIds, long currentId, boolean fromUser){
+        if(ObjectHelper.requireNonNull(ids)
+                || ObjectHelper.requireNonNull(randomIds)){
+            // 播放方式
+            PlayMethodEnum method = SettingHelper.build().getPlayMethod();
+            if(method == PlayMethodEnum.RANDOM){
+                ids = randomIds;
+            }
+            // 列表长度
+            int size = ids.size();
+            // 在列表中的位置
+            int index = ids.indexOf(currentId);
+            // 下一首的位置
+            int next = index + 1;
+            switch (method){
+                case ORDER:
+                    if(!fromUser){
+                        // 已经是最后一首
+                        if(size == index){
+                            // 返回内容为空的实体
+                            // 标识播放全部结束
+                            return new Song();
+                        }
+                        break;
+                    }
+                case ORDER_LOOP:
+                case RANDOM:
+                    // 随机播放依赖播放列表，下一曲的逻辑和顺序循环一样
+                    // 最后一首就从头开始
+                    if(size == index){
+                        next = 0;
+                    }
+                    break;
+                case SINGLE:
+                    if(!fromUser){
+                        // 单曲循环
+                        next = index;
+                    }
+                    break;
+            }
+            // 获取到id
+            long nextId = ids.get(next);
+            // 数据库找寻对应的歌曲
+            return LitePal.find(Song.class, nextId);
+        }
+       return null;
+    }
+
+    /**
+     * 根据播放方法和播放列表计算出上一首要播放的歌曲
+     * 触发上一曲肯定是用户主动切换
+     * @param ids 播放列表ids
+     * @param randomIds 播放列表随机ids
+     * @param currentId 当前播放的id
+     */
+    public @Nullable Song getPrevious(List<Long> ids, List<Long> randomIds, long currentId){
+        if(ObjectHelper.requireNonNull(ids)
+                || ObjectHelper.requireNonNull(randomIds)){
+            // 播放方式
+            PlayMethodEnum method = SettingHelper.build().getPlayMethod();
+            if(method == PlayMethodEnum.RANDOM){
+                ids = randomIds;
+            }
+            // 列表长度
+            int size = ids.size();
+            // 在列表中的位置
+            int index = ids.indexOf(currentId);
+            // 下一首的位置
+            int previous = index - 1;
+            // 随机播放依赖播放列表，下一曲的逻辑和顺序循环一样
+            // 最后一首就从头开始
+            if(index == -1){
+                previous = size - 1;
+            }
+            // 获取到id
+            long previousId = ids.get(previous);
+            // 数据库找寻对应的歌曲
+            return LitePal.find(Song.class, previousId);
+        }
+        return null;
+    }
 }

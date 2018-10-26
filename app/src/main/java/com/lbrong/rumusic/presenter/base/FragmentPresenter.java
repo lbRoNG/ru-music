@@ -17,7 +17,6 @@ package com.lbrong.rumusic.presenter.base;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -28,6 +27,9 @@ import com.lbrong.rumusic.common.net.RequestHelper;
 import com.lbrong.rumusic.common.net.api.ApiService;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.view.base.IDelegate;
+import com.trello.rxlifecycle2.LifecycleTransformer;
+import com.trello.rxlifecycle2.android.FragmentEvent;
+import com.trello.rxlifecycle2.components.support.RxFragment;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,7 +46,7 @@ import io.reactivex.schedulers.Schedulers;
  * Presenter层的实现基类
  * @param <T> View delegate class type
  */
-public abstract class FragmentPresenter<T extends IDelegate> extends Fragment {
+public abstract class FragmentPresenter<T extends IDelegate> extends RxFragment {
     public T viewDelegate;
     protected ApiService apiService;
     private CompositeDisposable disposableContainer;
@@ -59,9 +61,7 @@ public abstract class FragmentPresenter<T extends IDelegate> extends Fragment {
             apiService = RequestHelper.getInstance().getApiService();
             viewDelegate = getDelegateClass().newInstance();
             disposableContainer = new CompositeDisposable();
-        } catch (java.lang.InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
+        } catch (java.lang.InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
     }
@@ -80,16 +80,24 @@ public abstract class FragmentPresenter<T extends IDelegate> extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         viewDelegate.initWidget();
         bindEvenListener();
-        init();
         initLiveDataObserver();
+        init();
     }
 
     protected void init(){ }
 
     protected void bindEvenListener() { }
 
-    protected void initLiveDataObserver(){}
+    protected void initLiveDataObserver() { }
 
+    public <T> LifecycleTransformer<T> bindToLife(FragmentEvent event) {
+        return bindUntilEvent(event);
+    }
+
+    /**
+     * 等待所有任务完成
+     * @param taskCount 等待任务数量
+     */
     protected void startWaitAllTask(int taskCount){
         cancelWaitTask();
 
@@ -108,6 +116,9 @@ public abstract class FragmentPresenter<T extends IDelegate> extends Fragment {
                 });
     }
 
+    /**
+     * 等待任务完成一个
+     */
     protected void completeOne(){
         if(ObjectHelper.requireNonNull(waitTaskCount)
                 && waitTaskCount.get() >= 1){
@@ -115,10 +126,16 @@ public abstract class FragmentPresenter<T extends IDelegate> extends Fragment {
         }
     }
 
+    /**
+     * 等待任务完成全部的回调
+     */
     protected void onTaskAllComplete(){
         cancelWaitTask();
     }
 
+    /**
+     * 取消等待任务
+     */
     protected void cancelWaitTask(){
         if(ObjectHelper.requireNonNull(waitDisposable) && !waitDisposable.isDisposed()){
             waitDisposable.dispose();
@@ -148,12 +165,18 @@ public abstract class FragmentPresenter<T extends IDelegate> extends Fragment {
         }
     }
 
+    /**
+     * 异步任务保存
+     */
     protected void addDisposable(Disposable disposable){
         if(disposableContainer != null && disposable != null){
             disposableContainer.add(disposable);
         }
     }
 
+    /**
+     * 取消异步任务
+     */
     protected void clearDisposable(){
         if(disposableContainer != null){
             disposableContainer.clear();
@@ -165,10 +188,12 @@ public abstract class FragmentPresenter<T extends IDelegate> extends Fragment {
         super.onDestroy();
         viewDelegate = null;
         apiService = null;
+
         if(disposableContainer != null){
             disposableContainer.clear();
             disposableContainer = null;
         }
+
         cancelWaitTask();
     }
 

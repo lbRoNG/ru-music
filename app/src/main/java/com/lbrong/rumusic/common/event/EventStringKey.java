@@ -17,6 +17,7 @@ public final class EventStringKey {
         public final static String MUSIC_STOP = "music_stop";
         public final static String MUSIC_SEEK_TO = "music_seek_to";
         public final static String MUSIC_COMPLETE= "music_complete";
+        public final static String MUSIC_ALL_COMPLETE = "music_all_complete";
         public final static String MUSIC_STATE= "music_state";
     }
 }

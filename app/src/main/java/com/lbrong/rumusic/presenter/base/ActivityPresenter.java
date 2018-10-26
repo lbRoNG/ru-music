@@ -15,26 +15,26 @@
  */
 package com.lbrong.rumusic.presenter.base;
 
+import android.arch.lifecycle.LifecycleObserver;
 import android.os.Bundle;
 import android.support.annotation.StringRes;
 import android.support.v7.app.ActionBar;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
-
 import com.lbrong.rumusic.common.net.RequestHelper;
 import com.lbrong.rumusic.common.net.api.ApiService;
 import com.lbrong.rumusic.common.utils.DensityUtils;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.SystemUtils;
 import com.lbrong.rumusic.view.base.IDelegate;
-
+import com.trello.rxlifecycle2.LifecycleTransformer;
+import com.trello.rxlifecycle2.android.ActivityEvent;
+import com.trello.rxlifecycle2.components.support.RxAppCompatActivity;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
@@ -47,9 +47,10 @@ import io.reactivex.schedulers.Schedulers;
  * Presenter层的实现基类
  * @param <T> View delegate class type
  */
-public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatActivity {
+public abstract class ActivityPresenter<T extends IDelegate> extends RxAppCompatActivity {
     protected T viewDelegate;
     protected ApiService apiService;
+    protected LifecycleObserver lifecycleObserver;
     private CompositeDisposable disposableContainer;
     private AtomicInteger waitTaskCount;
     private Disposable waitDisposable;
@@ -59,9 +60,7 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
             apiService = RequestHelper.getInstance().getApiService();
             viewDelegate = getDelegateClass().newInstance();
             disposableContainer = new CompositeDisposable();
-        } catch (InstantiationException e) {
-            throw new RuntimeException("create IDelegate error");
-        } catch (IllegalAccessException e) {
+        } catch (InstantiationException | IllegalAccessException e) {
             throw new RuntimeException("create IDelegate error");
         }
     }
@@ -69,23 +68,33 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // setContentView前的设置
         setting();
+        // 初始化布局
         viewDelegate.create(getLayoutInflater(), null, savedInstanceState);
+        // 设置布局
         setContentView(viewDelegate.getRootView());
+        // 是否全屏模式
         if(isFullScreen()){
             SystemUtils.setFullScreen(this);
         }
+        // 设置适配
         setDensityCompat();
+        // 初始化toolbar
         initToolbar();
+        // 初始化UI工作
         viewDelegate.initWidget();
+        // 绑定监听器
         bindEvenListener();
-        init();
+        // 设置事件监听
         initLiveDataObserver();
+        // 初始化工作
+        init();
     }
 
     protected void bindEvenListener() { }
 
-    protected void initLiveDataObserver(){}
+    protected void initLiveDataObserver() { }
 
     protected void setDensityCompat(){
         DensityUtils.setDefault(this);
@@ -99,6 +108,14 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
 
     protected void setting(){}
 
+    public <T> LifecycleTransformer<T> bindToLife(ActivityEvent event) {
+        return bindUntilEvent(event);
+    }
+
+    /**
+     * 等待所有任务完成
+     * @param taskCount 等待任务数量
+     */
     protected void startWaitAllTask(int taskCount){
         cancelWaitTask();
 
@@ -117,6 +134,9 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
                 });
     }
 
+    /**
+     * 等待任务完成一个
+     */
     protected void completeOne(){
         if(ObjectHelper.requireNonNull(waitTaskCount)
                 && waitTaskCount.get() >= 1){
@@ -124,10 +144,16 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
         }
     }
 
+    /**
+     * 等待任务完成全部的回调
+     */
     protected void onTaskAllComplete(){
         cancelWaitTask();
     }
 
+    /**
+     * 取消等待任务
+     */
     protected void cancelWaitTask(){
         if(ObjectHelper.requireNonNull(waitDisposable) && !waitDisposable.isDisposed()){
             waitDisposable.dispose();
@@ -135,6 +161,9 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
         }
     }
 
+    /**
+     * 初始化toolbar
+     */
     protected void initToolbar() {
         Toolbar toolbar = viewDelegate.getToolbar();
         if (toolbar != null) {
@@ -162,37 +191,57 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
         }
     }
 
+    /**
+     * 设置标题
+     */
     protected void setToolbarTitle(String title){
         if(ObjectHelper.requireNonNull(viewDelegate.getTitleView())){
             viewDelegate.getTitleView().setText(title);
         }
     }
 
+    /**
+     * 设置标题
+     */
     protected void setToolbarTitle(@StringRes int resId){
         if(ObjectHelper.requireNonNull(viewDelegate.getTitleView())){
             viewDelegate.getTitleView().setText(resId);
         }
     }
 
+    /**
+     * 通过字符串设置标题文本
+     */
     protected String getTitleText(){
         return "";
     }
 
-    protected @StringRes
-    int getTitleTextId(){
+    /**
+     * 通过设置标题文本
+     */
+    protected @StringRes int getTitleTextId(){
         return 0;
     }
 
+    /**
+     * 是否显示返回箭头
+     */
     protected boolean displayHomeAsUp(){
         return false;
     }
 
+    /**
+     * 异步任务保存
+     */
     protected void addDisposable(Disposable disposable){
         if(disposableContainer != null && disposable != null){
             disposableContainer.add(disposable);
         }
     }
 
+    /**
+     * 取消异步任务
+     */
     protected void clearDisposable(){
         if(disposableContainer != null){
             disposableContainer.clear();
@@ -205,9 +254,7 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
         if (viewDelegate == null) {
             try {
                 viewDelegate = getDelegateClass().newInstance();
-            } catch (InstantiationException e) {
-                throw new RuntimeException("create IDelegate error");
-            } catch (IllegalAccessException e) {
+            } catch (InstantiationException | IllegalAccessException e) {
                 throw new RuntimeException("create IDelegate error");
             }
         }
@@ -232,14 +279,22 @@ public abstract class ActivityPresenter<T extends IDelegate> extends AppCompatAc
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
         viewDelegate = null;
         apiService = null;
+
         if((ObjectHelper.requireNonNull(disposableContainer))){
             disposableContainer.clear();
             disposableContainer = null;
+        }
+
+        if(ObjectHelper.requireNonNull(lifecycleObserver)){
+            getLifecycle().removeObserver(lifecycleObserver);
+            lifecycleObserver = null;
         }
         cancelWaitTask();
     }
 
     protected abstract Class<T> getDelegateClass();
 }
+

@@ -9,11 +9,23 @@ versions.dialog = "0.9.6.0"
 versions.BaseRecyclerViewAdapterHelper = "2.9.40"
 versions.glide = "4.7.1"
 versions.rxpermissions = "0.10.2"
-versions.litepal = "2.0.0"
+versions.litepal = "3.0.0"
 versions.progressmanager = "1.5.0"
 versions.bugly = "latest.release"
 versions.live_event_bus = "0.0.1"
+versions.rxLifecycle2 = "2.2.2"
+versions.mmkv = "1.0.12"
 def deps = [:]
+
+def mmkv = [:]
+mmkv.core = "com.tencent:mmkv:$versions.mmkv"
+deps.mmkv = mmkv
+
+def rxLifecycle2 = [:]
+rxLifecycle2.core = "com.trello.rxlifecycle2:rxlifecycle:$versions.rxLifecycle2"
+rxLifecycle2.android = "com.trello.rxlifecycle2:rxlifecycle-android:$versions.rxLifecycle2"
+rxLifecycle2.components = "com.trello.rxlifecycle2:rxlifecycle-components:$versions.rxLifecycle2"
+deps.rxLifecycle2 = rxLifecycle2
 
 def live_event_bus = [:]
 live_event_bus.core = "com.jeremyliao:live-event-bus:$versions.live_event_bus"
@@ -25,7 +37,7 @@ bugly.ndk = "com.tencent.bugly:nativecrashreport:$versions.bugly"
 deps.bugly = bugly
 
 def db = [:]
-db.core = "org.litepal.android:core:$versions.litepal"
+db.core = "org.litepal.android:java:$versions.litepal"
 deps.db = db
 
 def permissions = [:]

@@ -71,12 +71,15 @@ dependencies {
     implementation deps.dialog.commons
     implementation deps.list.core
     implementation deps.glide.core
-    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
     annotationProcessor deps.glide.compiler
     implementation deps.permissions.core
     implementation deps.db.core
     implementation deps.progressmanager.core
     implementation deps.live_event_bus.core
+    implementation deps.rxLifecycle2.core
+    implementation deps.rxLifecycle2.android
+    implementation deps.rxLifecycle2.components
     implementation deps.bugly.sdk
     implementation deps.bugly.ndk
+    implementation deps.mmkv.core
 }

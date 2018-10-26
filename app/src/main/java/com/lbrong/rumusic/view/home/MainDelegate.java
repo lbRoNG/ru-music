@@ -168,9 +168,15 @@ public class MainDelegate extends AppDelegate {
 
     public void showController(){
         PlayControllerView view = get(R.id.play_controller);
-        view.setVisibility(View.VISIBLE);
+        if(view.getVisibility() == View.GONE){
+            view.setVisibility(View.VISIBLE);
+        }
     }
 
+    /**
+     * 设置控制器处于的状态
+     * @param style 1 - 播放  其他 - 暂停
+     */
     public void setControllerStyle(int style){
         PlayControllerView view = get(R.id.play_controller);
         view.setStyle(style);
@@ -178,7 +184,9 @@ public class MainDelegate extends AppDelegate {
 
     public void hideController(){
         PlayControllerView view = get(R.id.play_controller);
-        view.setVisibility(View.GONE);
+        if(view.getVisibility() == View.VISIBLE){
+            view.setVisibility(View.GONE);
+        }
     }
 
     public void setControllerClickListener(OnPlayControllerClickListener listener){

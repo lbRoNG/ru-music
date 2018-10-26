@@ -131,32 +131,40 @@ public class MainActivity
                     @Override
                     public void onChanged(@Nullable String s) {
                         if(!TextUtils.isEmpty(s)){
+                            // 获取当前播放歌曲的总进度和播放到的进度
                             int start = playService.getCurrentPosition() / 1000;
                             int max = (int) (playService.getCurrentAudio().getDuration() / 1000);
                             switch (s){
                                 case EventStringKey.Music.MUSIC_PLAY:
+                                    // 显示并设置播放控制器
                                     viewDelegate.showController();
                                     viewDelegate.setControllerStyle(1);
+                                    setPlayController();
                                     break;
                                 case EventStringKey.Music.MUSIC_CONTINUE_PLAY:
+                                    // 重新计时
                                     if(playService != null){
                                         startPlayControllerTimer(start,max);
                                     }
                                     break;
                                 case EventStringKey.Music.MUSIC_PAUSE:
+                                    // 暂停计时
                                     if(controllerTimer != null && !controllerTimer.isDisposed()){
                                         controllerTimer.dispose();
                                     }
                                     break;
                                 case EventStringKey.Music.MUSIC_STOP:
+                                    // 隐藏控制器
                                     viewDelegate.hideController();
                                     viewDelegate.setControllerStyle(0);
                                     break;
                                 case EventStringKey.Music.MUSIC_RE_PLAY:
+                                    // 重新播放，进度清零，显示控制器
                                     startPlayControllerTimer(0,max);
                                     viewDelegate.setControllerStyle(1);
                                     break;
                                 case EventStringKey.Music.MUSIC_SEEK_TO:
+                                    // 用户改变播放位置，重新设置进度，并让控制条处于播放状态
                                     if(playService != null){
                                         startPlayControllerTimer(start,max);
                                         viewDelegate.setControllerStyle(1);
@@ -252,7 +260,7 @@ public class MainActivity
     /**
      * 设置控制器
      */
-    public void setPlayController(){
+    private void setPlayController(){
         if(playService != null){
             int max = (int) (playService.getCurrentAudio().getDuration() / 1000);
             viewDelegate.initController(playService.getCurrentAudio().getArtist()
@@ -264,7 +272,7 @@ public class MainActivity
     /**
      * 设置进度计数器
      */
-    public void startPlayControllerTimer(int start,int max){
+    private void startPlayControllerTimer(int start,int max){
         if(controllerTimer != null && !controllerTimer.isDisposed()){
             controllerTimer.dispose();
         }

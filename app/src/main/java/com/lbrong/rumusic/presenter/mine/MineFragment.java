@@ -11,13 +11,12 @@ import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
-
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
-import com.lbrong.rumusic.bean.Song;
 import com.lbrong.rumusic.common.adapter.SongListAdapter;
+import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.event.home.PageRefresh;
 import com.lbrong.rumusic.common.net.rx.subscriber.DefaultSubscriber;
@@ -33,13 +32,14 @@ import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.mine.MineDelegate;
 import com.lbrong.rumusic.view.widget.ErrorView;
 import com.tbruyelle.rxpermissions2.RxPermissions;
-
+import org.litepal.LitePal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-
 import io.reactivex.Flowable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 
 /**
@@ -47,13 +47,17 @@ import io.reactivex.schedulers.Schedulers;
  * @since 2018/10/18
  */
 public class MineFragment
-        extends FragmentPresenter<MineDelegate>
-        implements BaseQuickAdapter.OnItemClickListener, BaseQuickAdapter.OnItemChildClickListener{
+       extends FragmentPresenter<MineDelegate>
+       implements BaseQuickAdapter.OnItemClickListener, BaseQuickAdapter.OnItemChildClickListener{
 
     // 播放服务
     private PlayService playService;
     // 适配器
     private SongListAdapter songAdapter;
+    // 播放列表id合集
+    private List<Long> songListIds;
+    // 最后点击的时间戳
+    private long lastClickMS;
     // 当前歌单名称
     public final static String SONGLIST = "我的音乐";
 
@@ -99,42 +103,47 @@ public class MineFragment
                         if(!TextUtils.isEmpty(s)){
                             switch (s){
                                 case EventStringKey.Music.MUSIC_PLAY:
+                                    // 歌曲播放
+                                    if(playService != null){
+                                        songAdapter.startProgressTimer(0);
+                                        songAdapter.updatePlayingSongPos(playService.getCurrentAudio());
+                                    }
                                     break;
                                 case EventStringKey.Music.MUSIC_CONTINUE_PLAY:
+                                    // 继续播放
                                     if(songAdapter != null && playService != null){
                                         int start = playService.getCurrentPosition() / 1000;
                                         songAdapter.startProgressTimer(start);
                                     }
                                     break;
                                 case EventStringKey.Music.MUSIC_PAUSE:
+                                    // 暂停
                                     if(songAdapter != null){
                                         songAdapter.clearProgressTimer();
                                     }
                                     break;
                                 case EventStringKey.Music.MUSIC_STOP:
+                                    // 停止
                                     if(songAdapter != null){
                                         songAdapter.clearProgressTimer();
                                         songAdapter.resetSongState();
                                     }
                                     break;
                                 case EventStringKey.Music.MUSIC_RE_PLAY:
+                                    // 重新播放
+                                    if(songAdapter != null){
+                                        songAdapter.startProgressTimer(0);
+                                    }
                                     break;
                                 case EventStringKey.Music.MUSIC_SEEK_TO:
+                                    // 用户调整进度
                                     if(songAdapter != null && playService != null){
                                         int start = playService.getCurrentPosition() / 1000;
                                         songAdapter.startProgressTimer(start);
                                     }
                                     break;
                                 case EventStringKey.Music.MUSIC_COMPLETE:
-                                    if(songAdapter != null){
-                                        int playing = songAdapter.getPlayingSongPos();
-                                        int next = playing + 1;
-                                        if(next >= songAdapter.getData().size()){
-                                            next = 0;
-                                        }
-                                        View view = songAdapter.getViewByPosition(next,R.id.rl_root);
-                                        songAdapter.setOnItemClick(view,next);
-                                    }
+                                    // 单首播放完成
                                     break;
                             }
                         }
@@ -152,26 +161,26 @@ public class MineFragment
 
     @Override
     public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-        Object temp = adapter.getItem(position);
-        if (temp instanceof Song) {
-            if (songAdapter != null) {
-                if (songAdapter.getPlayingSongPos() != position) {
-                    // 复位上个播放的歌曲样式
-                    songAdapter.resetSongState();
-                    // 更新新播放歌曲的样式
-                    Song item = (Song) temp;
-                    item.getController().setPlaying(true);
-                    item.getController().setIntoSongList(SONGLIST);
-                    songAdapter.updatePlayingSongPos(position);
-                    // 播放
-                    startPlay(item);
-                } else {
-                    // 重新播放
-                    songAdapter.updatePlayingSongPos(position);
-                    replay();
+        long currentMS = System.currentTimeMillis();
+        // 防止点击过快
+        if(currentMS - lastClickMS >= 500){
+            Object temp = adapter.getItem(position);
+            if (temp instanceof Song) {
+                if (songAdapter != null) {
+                    if (songAdapter.getPlayingSongPos() != position) {
+                        // 更新新播放歌曲的样式
+                        Song item = (Song) temp;
+                        item.getController().setIntoSongList(SONGLIST);
+                        // 播放
+                        startPlay(item);
+                    } else {
+                        // 重新播放
+                        replay();
+                    }
                 }
             }
         }
+        lastClickMS = currentMS;
     }
 
     @Override
@@ -247,6 +256,21 @@ public class MineFragment
                         return MusicHelper.build().getLocalMusic(getActivity());
                     }
                 }).subscribeOn(Schedulers.io())
+                        .observeOn(Schedulers.computation())
+                        .map(new Function<List<Song>, List<Song>>() {
+                            @Override
+                            public List<Song> apply(List<Song> songs){
+                                // 保存到本地数据库
+                                LitePal.deleteAll(Song.class);
+                                LitePal.saveAll(songs);
+                                // 记录ids
+                                songListIds = new ArrayList<>();
+                                for (Song item : songs) {
+                                    songListIds.add(item.getId());
+                                }
+                                return songs;
+                            }
+                        })
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribeWith(new DefaultSubscriber<List<Song>>(){
                             @Override
@@ -326,8 +350,7 @@ public class MineFragment
     /**
      * 获取依附的Activity
      */
-    private @Nullable
-    MainActivity getMain(){
+    private @Nullable MainActivity getMain(){
         if(getActivity() instanceof MainActivity){
             return (MainActivity) getActivity();
         }
@@ -338,7 +361,7 @@ public class MineFragment
      * 开始播放
      */
     private void startPlay(final Song item) {
-        final MainActivity activity = getMain();
+        MainActivity activity = getMain();
         if (songAdapter != null && activity != null) {
             // 复位进度，重新开始播放
             songAdapter.startProgressTimer(0);
@@ -351,14 +374,13 @@ public class MineFragment
                         playService = service;
                         service.setAudio(item);
                         service.playAudio();
-                        activity.setPlayController();
+                        service.setSongListIds(songListIds);
                     }
                 });
             } else {
                 // 播放音乐
                 playService.setAudio(item);
                 playService.playAudio();
-                activity.setPlayController();
             }
         }
     }
@@ -368,7 +390,6 @@ public class MineFragment
      */
     private void replay() {
         if (songAdapter != null && playService != null) {
-            songAdapter.startProgressTimer(0);
             playService.rePlay();
         }
     }

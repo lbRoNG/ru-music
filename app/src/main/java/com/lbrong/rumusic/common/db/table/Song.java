@@ -1,6 +1,9 @@
-package com.lbrong.rumusic.bean;
+package com.lbrong.rumusic.common.db.table;
 
 import android.graphics.Bitmap;
+
+import org.litepal.annotation.Column;
+import org.litepal.crud.LitePalSupport;
 
 import java.lang.ref.WeakReference;
 import java.util.Objects;
@@ -9,18 +12,24 @@ import java.util.Objects;
  * @author lbRoNG
  * @since 2018/10/18
  */
-public class Song {
+public class Song extends LitePalSupport {
+    @Column(unique = true)
     private long id;
     private long albumId;
-    private String title;
-    private String artist;
-    private long size;
-    private String url;
-    private int music;
-    private long duration;
+    @Column(defaultValue = "未知")
     private String album;
+    @Column(defaultValue = "未知")
+    private String title;
+    @Column(defaultValue = "群星")
+    private String artist;
+    private String url;
+    private long size;
+    private long duration;
+    private int music;
     private int bitrate;
+    @Column(ignore = true)
     private PlayController controller;
+    @Column(ignore = true)
     private WeakReference<Bitmap> bitmap;
 
     @Override
@@ -39,7 +48,7 @@ public class Song {
         return Objects.hash(getId(), getAlbumId(), getSize(), getDuration());
     }
 
-    public class PlayController{
+    public class PlayController {
         private boolean playing;
         private String intoSongList;
 

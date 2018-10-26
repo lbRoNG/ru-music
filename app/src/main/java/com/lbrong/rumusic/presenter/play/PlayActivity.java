@@ -18,7 +18,7 @@ import android.view.Window;
 import android.widget.SeekBar;
 
 import com.lbrong.rumusic.R;
-import com.lbrong.rumusic.bean.Song;
+import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.utils.DateUtils;
 import com.lbrong.rumusic.common.utils.ImageUtils;

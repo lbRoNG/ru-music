@@ -242,3 +242,7 @@
 #---------------------------------bugly---------------------------------------
 -dontwarn com.tencent.bugly.**
 -keep public class com.tencent.bugly.**{*;}
+
+#---------------------------------rxlifecycle---------------------------------------
+-keep class com.trello.rxlifecycle.** { *; }
+-keep interface com.trello.rxlifecycle.** { *; }

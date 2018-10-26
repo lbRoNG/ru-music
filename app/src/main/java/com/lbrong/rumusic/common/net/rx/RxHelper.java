@@ -1,5 +1,7 @@
 package com.lbrong.rumusic.common.net.rx;
 
+import com.trello.rxlifecycle2.LifecycleProvider;
+
 import org.reactivestreams.Publisher;
 
 import io.reactivex.BackpressureStrategy;
@@ -15,6 +17,7 @@ import io.reactivex.schedulers.Schedulers;
  * @author lbRoNG
  * @since 2018/7/16
  */
+@SuppressWarnings("unchecked")
 public class RxHelper {
 
     public static <T> Flowable<T> createData(final T t) {
@@ -34,6 +37,18 @@ public class RxHelper {
                 return upstream
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread());
+            }
+        };
+    }
+
+    public static <T,M extends LifecycleProvider> FlowableTransformer<T, T> schedulerOnLifecycle(
+            @NonNull final M provider) {
+        return new FlowableTransformer<T, T>() {
+            @Override
+            public Publisher<T> apply(@NonNull Flowable<T> upstream) {
+                return upstream
+                        .compose(RxHelper.<T>scheduler())
+                        .compose(provider.<T>bindToLifecycle());
             }
         };
     }

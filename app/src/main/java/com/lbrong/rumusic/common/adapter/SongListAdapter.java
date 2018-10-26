@@ -11,7 +11,7 @@ import android.widget.SeekBar;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
 import com.lbrong.rumusic.R;
-import com.lbrong.rumusic.bean.Song;
+import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import java.lang.ref.WeakReference;
 import java.util.List;
@@ -49,9 +49,27 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
      */
     public void updatePlayingSongPos(int pos) {
         // 上个
-        notifyItemChanged(playingSongPos);
+        resetSongState();
         // 更新
         this.playingSongPos = pos;
+        if(playingSongPos != -1){
+            getData().get(playingSongPos).getController().setPlaying(true);
+        }
+        // 新的
+        notifyItemChanged(playingSongPos);
+    }
+
+    /**
+     * 更新新的播放item位置
+     */
+    public void updatePlayingSongPos(Song item) {
+        // 上个
+        resetSongState();
+        // 更新
+        this.playingSongPos = getData().indexOf(item);
+        if(playingSongPos != -1){
+            getData().get(playingSongPos).getController().setPlaying(true);
+        }
         // 新的
         notifyItemChanged(playingSongPos);
     }
