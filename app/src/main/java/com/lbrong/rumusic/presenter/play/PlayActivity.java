@@ -15,6 +15,7 @@ import android.transition.Transition;
 import android.transition.TransitionInflater;
 import android.view.View;
 import android.view.Window;
+import android.view.animation.LinearInterpolator;
 import android.widget.SeekBar;
 
 import com.lbrong.rumusic.R;
@@ -44,8 +45,8 @@ import io.reactivex.schedulers.Schedulers;
  * 播放详情
  */
 public class PlayActivity
-        extends ActivityPresenter<PlayDelegate>
-        implements View.OnClickListener, SeekBar.OnSeekBarChangeListener {
+       extends ActivityPresenter<PlayDelegate>
+       implements View.OnClickListener, SeekBar.OnSeekBarChangeListener {
 
     // 播放服务
     private PlayService playService;
@@ -53,6 +54,8 @@ public class PlayActivity
     private ServiceConnection serviceConnection;
     // 进去条计时器
     private Disposable progressTimer;
+    // 是否列表播放完成
+    private boolean isMusicAllComplete;
 
     @Override
     protected Class<PlayDelegate> getDelegateClass() {
@@ -90,11 +93,13 @@ public class PlayActivity
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        // 解除动画
+        stopCDRotateAnim();
         // 解绑服务
         if (serviceConnection != null && playService != null) {
             unbindService(serviceConnection);
         }
+        super.onDestroy();
     }
 
     @Override
@@ -106,15 +111,30 @@ public class PlayActivity
             case R.id.iv_start:
                 if(playService != null){
                     if(playService.isPlaying()){
+                        // 正在播放状态就暂停
                         playService.pause();
                     } else {
-                        playService.continuePlay();
+                        if(isMusicAllComplete){
+                            // 如果列表完成了一次，要重新设置起始状态才能开始
+                            isMusicAllComplete = false;
+                            playService.setAudio(playService.getCurrentAudio());
+                            playService.playAudio();
+                        } else {
+                            // 暂停状态直接继续播放
+                            playService.continuePlay();
+                        }
                     }
                 }
                 break;
             case R.id.iv_pre:
+                if(playService != null){
+                    playService.previous();
+                }
                 break;
             case R.id.iv_next:
+                if(playService != null){
+                    playService.next(true);
+                }
                 break;
         }
     }
@@ -130,8 +150,21 @@ public class PlayActivity
                         if (!TextUtils.isEmpty(s)) {
                             switch (s) {
                                 case EventStringKey.Music.MUSIC_PLAY:
+                                    // 歌曲播放
+                                    initSongInfo();
+                                    // cd动画
+                                    startCDRotateAnim();
+                                case EventStringKey.Music.MUSIC_RE_PLAY:
+                                    // 重新播放
+                                    viewDelegate.setPlayIcon(true);
+                                    startProgressTimer(0);
                                     break;
                                 case EventStringKey.Music.MUSIC_CONTINUE_PLAY:
+                                    // 继续播放
+                                    // cd动画
+                                    startCDRotateAnim();
+                                case EventStringKey.Music.MUSIC_SEEK_TO:
+                                    // 继续播放
                                     viewDelegate.setPlayIcon(true);
                                     if(playService != null){
                                         int start = playService.getCurrentPosition() / 1000;
@@ -139,25 +172,21 @@ public class PlayActivity
                                     }
                                     break;
                                 case EventStringKey.Music.MUSIC_PAUSE:
-                                    viewDelegate.setPlayIcon(false);
-                                    clearProgressTimer();
-                                    break;
+                                    // 暂停
                                 case EventStringKey.Music.MUSIC_STOP:
-                                    viewDelegate.setPlayIcon(false);
-                                    clearProgressTimer();
-                                    break;
-                                case EventStringKey.Music.MUSIC_RE_PLAY:
-                                    viewDelegate.setPlayIcon(true);
-                                    break;
-                                case EventStringKey.Music.MUSIC_SEEK_TO:
-                                    if(playService != null){
-                                        int start = playService.getCurrentPosition() / 1000;
-                                        startProgressTimer(start);
-                                    }
-                                    break;
+                                    // 停止
                                 case EventStringKey.Music.MUSIC_COMPLETE:
+                                    // 单首播放完成
                                     viewDelegate.setPlayIcon(false);
                                     clearProgressTimer();
+                                    // cd动画
+                                    stopCDRotateAnim();
+                                    break;
+                                case EventStringKey.Music.MUSIC_ALL_COMPLETE:
+                                    // 播放列表播放完毕，并且不循环
+                                    isMusicAllComplete = true;
+                                    // cd动画
+                                    stopCDRotateAnim();
                                     break;
                             }
                         }
@@ -217,7 +246,7 @@ public class PlayActivity
                 long totalMs = playService.getDuration();
                 String current = DateUtils.getDateString(currentMs, "mm:ss");
                 String total = DateUtils.getDateString(totalMs, "mm:ss");
-                viewDelegate.setSongListName(item.getController().getIntoSongList())
+                viewDelegate.setSongListName(playService.getSongListName())
                         .setSongName(item.getTitle())
                         .setSinger(item.getArtist())
                         .setCurrentDuration(current)
@@ -229,6 +258,7 @@ public class PlayActivity
                         .setMaxSeekBar((int) totalMs / 1000);
                 // 进度条同步
                 if (playService.isPlaying()) {
+                    startCDRotateAnim();
                     startProgressTimer(playService.getCurrentPosition() / 1000);
                 }
                 // 按钮同步
@@ -291,5 +321,38 @@ public class PlayActivity
                         viewDelegate.setCurrentDuration(DateUtils.getDateString(playService.getCurrentPosition(), "mm:ss"));
                     }
                 }));
+    }
+
+    /**
+     * 开始cd旋转动画
+     */
+    private void startCDRotateAnim(){
+        if(playService != null){
+            // 计算旋转圈数
+            // 总时间，最大设置60分钟一首
+            long total = 60 * 60 * 1000;
+            // 一圈毫秒值
+            long one = 5000;
+            // 圈数
+            long count = total / one;
+            // 设置动画
+            View cover = viewDelegate.get(R.id.iv_cover_bg);
+            // 取消原有动画
+            stopCDRotateAnim();
+            // 开启动画
+            cover.animate()
+                    .setStartDelay(0)
+                    .setInterpolator(new LinearInterpolator())
+                    .rotation(count * 360f)
+                    .setDuration(total);
+        }
+    }
+
+    /**
+     * 停止cd旋转动画
+     */
+    private void stopCDRotateAnim(){
+        View cover = viewDelegate.get(R.id.iv_cover_bg);
+        cover.animate().cancel();
     }
 }

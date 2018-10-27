@@ -168,11 +168,8 @@ public class MineFragment
             if (temp instanceof Song) {
                 if (songAdapter != null) {
                     if (songAdapter.getPlayingSongPos() != position) {
-                        // 更新新播放歌曲的样式
-                        Song item = (Song) temp;
-                        item.getController().setIntoSongList(SONGLIST);
                         // 播放
-                        startPlay(item);
+                        startPlay((Song) temp);
                     } else {
                         // 重新播放
                         replay();
@@ -374,6 +371,7 @@ public class MineFragment
                         playService = service;
                         service.setAudio(item);
                         service.playAudio();
+                        service.setSongListName(SONGLIST);
                         service.setSongListIds(songListIds);
                     }
                 });

@@ -41,6 +41,8 @@ public class PlayService extends Service {
     private List<Long> songListIds;
     // 播放列表随机id合集
     private List<Long> randomSongListIds;
+    // 播放列表名称
+    private String songListName;
     // 任务集合
     private CompositeDisposable compositeDisposable;
 
@@ -223,10 +225,7 @@ public class PlayService extends Service {
      * 是否正在播放
      */
     public boolean isPlaying(){
-        if(mPlayer != null){
-            return mPlayer.isPlaying();
-        }
-        return false;
+        return mPlayer != null && mPlayer.isPlaying();
     }
 
     /**
@@ -247,7 +246,8 @@ public class PlayService extends Service {
                             Song song = MusicHelper.build().getNext(songListIds,randomSongListIds,id,fromUser);
                             if(song != null){
                                 if(song.getId() == 0){
-                                    SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_ALL_COMPLETE);
+                                    // 全部播放完成
+                                    SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_ALL_COMPLETE);
                                 } else {
                                     currentAudio = song;
                                     setAudio(currentAudio);
@@ -255,7 +255,7 @@ public class PlayService extends Service {
                                 }
                             } else {
                                 // 找不到对应歌曲，停止播放
-                                SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
+                                SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
                             }
                         }
                         return true;
@@ -286,16 +286,12 @@ public class PlayService extends Service {
                             long id = currentAudio.getId();
                             Song song = MusicHelper.build().getPrevious(songListIds,randomSongListIds,id);
                             if(song != null){
-                                if(song.getId() == 0){
-                                    SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_ALL_COMPLETE);
-                                } else {
-                                    currentAudio = song;
-                                    setAudio(currentAudio);
-                                    playAudio();
-                                }
+                                currentAudio = song;
+                                setAudio(currentAudio);
+                                playAudio();
                             } else {
                                 // 找不到对应歌曲，停止播放
-                                SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
+                                SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
                             }
                         }
                         return true;
@@ -335,6 +331,23 @@ public class PlayService extends Service {
         }
     }
 
+    /**
+     * 获取播放列表名称
+     */
+    public String getSongListName() {
+        return songListName;
+    }
+
+    /**
+     * 设置播放列表名称
+     */
+    public void setSongListName(String songListName) {
+        this.songListName = songListName;
+    }
+
+    /**
+     * 获取播放列表id合集
+     */
     public List<Long> getSongListIds() {
         return songListIds;
     }

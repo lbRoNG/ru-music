@@ -50,7 +50,6 @@ public class Song extends LitePalSupport {
 
     public class PlayController {
         private boolean playing;
-        private String intoSongList;
 
         public boolean isPlaying() {
             return playing;
@@ -58,14 +57,6 @@ public class Song extends LitePalSupport {
 
         public void setPlaying(boolean playing) {
             this.playing = playing;
-        }
-
-        public String getIntoSongList() {
-            return intoSongList;
-        }
-
-        public void setIntoSongList(String intoSongList) {
-            this.intoSongList = intoSongList;
         }
     }
 

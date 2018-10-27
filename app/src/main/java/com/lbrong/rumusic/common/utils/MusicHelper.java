@@ -150,7 +150,7 @@ public final class MusicHelper {
                 case ORDER:
                     if(!fromUser){
                         // 已经是最后一首
-                        if(size == index){
+                        if(size == next){
                             // 返回内容为空的实体
                             // 标识播放全部结束
                             return new Song();
@@ -161,7 +161,7 @@ public final class MusicHelper {
                 case RANDOM:
                     // 随机播放依赖播放列表，下一曲的逻辑和顺序循环一样
                     // 最后一首就从头开始
-                    if(size == index){
+                    if(size == next){
                         next = 0;
                     }
                     break;
@@ -203,7 +203,7 @@ public final class MusicHelper {
             int previous = index - 1;
             // 随机播放依赖播放列表，下一曲的逻辑和顺序循环一样
             // 最后一首就从头开始
-            if(index == -1){
+            if(previous == -1){
                 previous = size - 1;
             }
             // 获取到id
