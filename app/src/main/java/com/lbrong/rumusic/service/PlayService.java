@@ -19,6 +19,7 @@ import com.lbrong.rumusic.common.utils.SettingHelper;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -41,7 +42,7 @@ public class PlayService extends Service {
     private List<Long> songListIds;
     // 播放列表随机id合集
     private List<Long> randomSongListIds;
-    // 播放列表名称
+    // 歌单名称
     private String songListName;
     // 任务集合
     private CompositeDisposable compositeDisposable;
@@ -325,8 +326,8 @@ public class PlayService extends Service {
      */
     public void setRandomSongListIds(){
         if(ObjectHelper.requireNonNull(songListIds)){
-            this.randomSongListIds = new ArrayList<>();
-            Collections.copy(songListIds,randomSongListIds);
+            this.randomSongListIds = new ArrayList<>(Arrays.asList(new Long[songListIds.size()]));
+            Collections.copy(randomSongListIds,songListIds);
             Collections.shuffle(randomSongListIds);
         }
     }

@@ -16,22 +16,27 @@ import android.transition.TransitionInflater;
 import android.view.View;
 import android.view.Window;
 import android.view.animation.LinearInterpolator;
+import android.widget.ImageView;
 import android.widget.SeekBar;
-
 import com.lbrong.rumusic.R;
+import com.lbrong.rumusic.common.adapter.BasicPlayListAdapter;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
+import com.lbrong.rumusic.common.type.PlayMethodEnum;
 import com.lbrong.rumusic.common.utils.DateUtils;
 import com.lbrong.rumusic.common.utils.ImageUtils;
 import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
+import com.lbrong.rumusic.common.utils.SettingHelper;
+import com.lbrong.rumusic.iface.listener.OnPlayMethodChangeListener;
 import com.lbrong.rumusic.presenter.base.ActivityPresenter;
 import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.play.PlayDelegate;
-
+import org.litepal.LitePal;
+import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -46,7 +51,7 @@ import io.reactivex.schedulers.Schedulers;
  */
 public class PlayActivity
        extends ActivityPresenter<PlayDelegate>
-       implements View.OnClickListener, SeekBar.OnSeekBarChangeListener {
+       implements View.OnClickListener, SeekBar.OnSeekBarChangeListener, OnPlayMethodChangeListener {
 
     // 播放服务
     private PlayService playService;
@@ -56,6 +61,8 @@ public class PlayActivity
     private Disposable progressTimer;
     // 是否列表播放完成
     private boolean isMusicAllComplete;
+    // 播放列表适配器
+    private BasicPlayListAdapter playListAdapter;
 
     @Override
     protected Class<PlayDelegate> getDelegateClass() {
@@ -81,7 +88,9 @@ public class PlayActivity
     @Override
     protected void bindEvenListener() {
         super.bindEvenListener();
-        viewDelegate.setOnClickListener(this, R.id.iv_back,R.id.iv_start,R.id.iv_pre,R.id.iv_next);
+        viewDelegate.setOnClickListener(this, R.id.iv_back,R.id.iv_start,R.id.iv_pre,R.id.iv_next,
+                R.id.iv_sort_more_2);
+        viewDelegate.setOnPlayMethodChangeListener(this);
     }
 
     @Override
@@ -89,6 +98,8 @@ public class PlayActivity
         super.init();
         // 绑定服务
         bindPlayService();
+        // 设置播放方式默认值
+        setPlayMethod();
     }
 
     @Override
@@ -100,6 +111,15 @@ public class PlayActivity
             unbindService(serviceConnection);
         }
         super.onDestroy();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if(viewDelegate.isDrawerShow()){
+            viewDelegate.closeDrawer();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     @Override
@@ -136,6 +156,9 @@ public class PlayActivity
                     playService.next(true);
                 }
                 break;
+            case R.id.iv_sort_more_2:
+                viewDelegate.openDrawer();
+                break;
         }
     }
 
@@ -154,6 +177,10 @@ public class PlayActivity
                                     initSongInfo();
                                     // cd动画
                                     startCDRotateAnim();
+                                    // 播放列表
+                                    if(playListAdapter != null && playService != null){
+                                        playListAdapter.updatePlayingSongPos(playService.getCurrentAudio());
+                                    }
                                 case EventStringKey.Music.MUSIC_RE_PLAY:
                                     // 重新播放
                                     viewDelegate.setPlayIcon(true);
@@ -210,6 +237,11 @@ public class PlayActivity
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) { }
+
+    @Override
+    public void onPlayMethodChange(PlayMethodEnum method) {
+        SettingHelper.build().playMethod(method);
+    }
 
     /**
      * 绑定服务
@@ -285,8 +317,20 @@ public class PlayActivity
                                     }
                                 })
                 );
+                // 设置播放列表
+                if(playListAdapter == null){
+                    setPlayList();
+                }
             }
         }
+    }
+
+    /**
+     * 设置播放方式选中的UI
+     */
+    private void setPlayMethod(){
+        PlayMethodEnum method = SettingHelper.build().getPlayMethod();
+        viewDelegate.setPlayMethod(method);
     }
 
     /**
@@ -354,5 +398,69 @@ public class PlayActivity
     private void stopCDRotateAnim(){
         View cover = viewDelegate.get(R.id.iv_cover_bg);
         cover.animate().cancel();
+    }
+
+    /**
+     * 设置播放列表
+     */
+    private void setPlayList(){
+        addDisposable(
+                Observable.fromCallable(new Callable<List<Song>>(){
+                    @Override
+                    public List<Song> call(){
+                        // 获取播放列表ids
+                        List<Long> ids = playService.getSongListIds();
+                        // 获取对应的歌曲集合
+                        long[] temp = new long[ids.size()];
+                        for (int i = 0; i < ids.size(); i++) {
+                            temp[i] = ids.get(i);
+                        }
+                        // 数据库取出对应数据
+                        List<Song> songs = LitePal.findAll(Song.class,temp);
+                        // 更新更在播放的音乐状态
+                        Song playing = playService.getCurrentAudio();
+                        int index = songs.indexOf(playing);
+                        songs.remove(playing);
+                        songs.add(index,playing);
+                        return songs;
+                    }
+                })
+                .subscribeOn(Schedulers.computation())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<List<Song>>() {
+                    @Override
+                    public void accept(List<Song> songs){
+                        viewDelegate.setPlayListAdapter(
+                                playListAdapter = new BasicPlayListAdapter(songs){
+                                    @Override
+                                    protected void asyncCover(final ImageView view,final Song item) {
+                                        addDisposable(
+                                                Flowable.fromCallable(new Callable<Bitmap>() {
+                                                    @Override
+                                                    public Bitmap call() {
+                                                        Bitmap cover = MusicHelper.build().getAlbumArt(item.getUrl(), 0);
+                                                        if(cover == null){
+                                                            Drawable drawable = ContextCompat.getDrawable(
+                                                                    PlayActivity.this,R.drawable.ic_mine_song_default_cover);
+                                                            cover = ImageUtils.drawableToBitmap(drawable);
+                                                        } else {
+                                                            item.setBitmap(new WeakReference<>(cover));
+                                                        }
+                                                        return cover;
+                                                    }
+                                                }).subscribeOn(Schedulers.io())
+                                                        .observeOn(AndroidSchedulers.mainThread())
+                                                        .subscribe(new Consumer<Bitmap>() {
+                                                            @Override
+                                                            public void accept(Bitmap bitmap) {
+                                                                view.setImageBitmap(bitmap);
+                                                            }
+                                                        })
+                                        );
+                                    }
+                                });
+                    }
+                })
+        );
     }
 }

@@ -152,6 +152,7 @@ public class MainActivity
                                     if(controllerTimer != null && !controllerTimer.isDisposed()){
                                         controllerTimer.dispose();
                                     }
+                                    viewDelegate.setControllerStyle(0);
                                     break;
                                 case EventStringKey.Music.MUSIC_STOP:
                                     // 隐藏控制器
@@ -210,7 +211,9 @@ public class MainActivity
 
     @Override
     public void onAudioNext() {
-        SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_COMPLETE);
+        if(playService != null){
+            playService.next(true);
+        }
     }
 
     /**

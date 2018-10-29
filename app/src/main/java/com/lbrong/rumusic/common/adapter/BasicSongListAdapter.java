@@ -27,12 +27,12 @@ import io.reactivex.schedulers.Schedulers;
  * @since 2018/10/19
  * 我的tab播放列表适配器
  */
-public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
+public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
     // 正在播放的Song在适配器中的位置
     private int playingSongPos = -1;
     private Disposable timer;
 
-    protected SongListAdapter(@Nullable List<Song> data) {
+    protected BasicSongListAdapter(@Nullable List<Song> data) {
         super(R.layout.item_basics_song,data);
     }
 
@@ -170,7 +170,6 @@ public class SongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
                             if(view_ != null){
                                 view_.setProgress(Integer.parseInt(progress+""));
                             }
-
                         }
                     });
         }
