@@ -10,6 +10,8 @@ import android.graphics.drawable.Drawable;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.TextUtils;
 import android.transition.Transition;
 import android.transition.TransitionInflater;
@@ -18,6 +20,7 @@ import android.view.Window;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
 import android.widget.SeekBar;
+import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.adapter.BasicPlayListAdapter;
 import com.lbrong.rumusic.common.db.table.Song;
@@ -26,14 +29,17 @@ import com.lbrong.rumusic.common.type.PlayMethodEnum;
 import com.lbrong.rumusic.common.utils.DateUtils;
 import com.lbrong.rumusic.common.utils.ImageUtils;
 import com.lbrong.rumusic.common.utils.MusicHelper;
+import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
 import com.lbrong.rumusic.common.utils.SettingHelper;
 import com.lbrong.rumusic.iface.listener.OnPlayMethodChangeListener;
 import com.lbrong.rumusic.presenter.base.ActivityPresenter;
 import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.play.PlayDelegate;
+import com.lbrong.rumusic.view.widget.ListSwipeHelperCallback;
 import org.litepal.LitePal;
 import java.lang.ref.WeakReference;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +57,8 @@ import io.reactivex.schedulers.Schedulers;
  */
 public class PlayActivity
        extends ActivityPresenter<PlayDelegate>
-       implements View.OnClickListener, SeekBar.OnSeekBarChangeListener, OnPlayMethodChangeListener {
+       implements View.OnClickListener, SeekBar.OnSeekBarChangeListener, OnPlayMethodChangeListener
+        , BaseQuickAdapter.OnItemClickListener,BaseQuickAdapter.OnItemChildClickListener {
 
     // 播放服务
     private PlayService playService;
@@ -61,6 +68,8 @@ public class PlayActivity
     private Disposable progressTimer;
     // 是否列表播放完成
     private boolean isMusicAllComplete;
+    // 播放列表拖拽监听
+    private ListSwipeHelperCallback<Song> swipeCallback;
     // 播放列表适配器
     private BasicPlayListAdapter playListAdapter;
 
@@ -221,6 +230,9 @@ public class PlayActivity
                 });
     }
 
+    /**
+     * 用户改变进度的监听
+     */
     @Override
     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
         if (fromUser) {
@@ -241,6 +253,26 @@ public class PlayActivity
     @Override
     public void onPlayMethodChange(PlayMethodEnum method) {
         SettingHelper.build().playMethod(method);
+    }
+
+    /**
+     * 播放列表菜单点击监听
+     */
+    @Override
+    public void onItemChildClick(BaseQuickAdapter adapter, View view, int position) {
+
+    }
+
+    /**
+     * 播放列表点击监听
+     */
+    @Override
+    public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
+        Object obj = adapter.getItem(position);
+        if(obj instanceof Song){
+            Song item = (Song) obj;
+            viewDelegate.toast(item.getTitle());
+        }
     }
 
     /**
@@ -430,6 +462,7 @@ public class PlayActivity
                 .subscribe(new Consumer<List<Song>>() {
                     @Override
                     public void accept(List<Song> songs){
+                        // 设置适配器
                         viewDelegate.setPlayListAdapter(
                                 playListAdapter = new BasicPlayListAdapter(songs){
                                     @Override
@@ -459,8 +492,60 @@ public class PlayActivity
                                         );
                                     }
                                 });
+                        // 点击监听
+                        playListAdapter.setOnItemClickListener(PlayActivity.this);
+                        playListAdapter.setOnItemChildClickListener(PlayActivity.this);
+                        // 支持拖拽操作
+                        setPlayListSwipe(songs);
                     }
                 })
         );
+    }
+
+    /**
+     * 设置播放列表拖拽操作
+     */
+    private void setPlayListSwipe(final List<Song> songs){
+        if(swipeCallback == null && ObjectHelper.requireNonNull(songs)){
+            swipeCallback = new ListSwipeHelperCallback<Song>(songs) {
+                @Override
+                public void notifyDismiss(int pos, Song item) {
+                    if(playListAdapter != null){
+                        // 更新列表
+                        playListAdapter.getData().remove(pos);
+                        playListAdapter.notifyItemRangeRemoved(pos,1);
+                        playListAdapter.notifyItemRangeChanged(pos,songs.size() - pos);
+                        // 更新服务
+                        if(playService != null){
+                            // 正在播放的歌曲，直接下一首
+                            if(item.equals(playService.getCurrentAudio())){
+                                playService.next(true);
+                            }
+                            // 更新服务播放列表
+                            List<Long> ids = playService.getSongListIds();
+                            ids.remove(pos);
+                        }
+                    }
+                }
+
+                @Override
+                public void notifyMove(int fromPosition, int toPosition, Song fromItem, Song toItem) {
+                    if(playListAdapter != null){
+                        // 更新列表
+                        Collections.swap(playListAdapter.getData(), fromPosition, toPosition);
+                        playListAdapter.notifyItemMoved(fromPosition, toPosition);
+                        int start = fromPosition > toPosition ? toPosition : fromPosition;
+                        playListAdapter.notifyItemRangeChanged(start,Math.abs(fromPosition - toPosition) + 1);
+                        // 更新服务播放列表
+                        if(playService != null){
+                            List<Long> ids = playService.getSongListIds();
+                            Collections.swap(ids, fromPosition, toPosition);
+                        }
+                    }
+                }
+            };
+            ItemTouchHelper helper = new ItemTouchHelper(swipeCallback);
+            helper.attachToRecyclerView((RecyclerView) viewDelegate.get(R.id.rv_list));
+        }
     }
 }

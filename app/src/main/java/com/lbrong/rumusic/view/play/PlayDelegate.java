@@ -9,7 +9,6 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
-
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.type.PlayMethodEnum;
@@ -150,8 +149,6 @@ public class PlayDelegate extends AppDelegate {
 
     /**
      * 设置播放方式切换监听
-     * @param listener
-     * @return
      */
     public PlayDelegate setOnPlayMethodChangeListener(OnPlayMethodChangeListener listener){
         if(listener != null){

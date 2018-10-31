@@ -250,6 +250,7 @@ public class PlayService extends Service {
                                     // 全部播放完成
                                     SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_ALL_COMPLETE);
                                 } else {
+                                    song.getController().setPlaying(true);
                                     currentAudio = song;
                                     setAudio(currentAudio);
                                     playAudio();
@@ -287,6 +288,7 @@ public class PlayService extends Service {
                             long id = currentAudio.getId();
                             Song song = MusicHelper.build().getPrevious(songListIds,randomSongListIds,id);
                             if(song != null){
+                                song.getController().setPlaying(true);
                                 currentAudio = song;
                                 setAudio(currentAudio);
                                 playAudio();

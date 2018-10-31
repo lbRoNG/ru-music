@@ -6,7 +6,7 @@
     android:layout_height="@dimen/play_list_song_item_height"
     android:layout_centerVertical="true"
     android:animateLayoutChanges="true"
-    android:background="?attr/selectableItemBackground"
+    android:foreground="?attr/selectableItemBackground"
     android:paddingStart="@dimen/dp16"
     android:paddingEnd="@dimen/dp16">
 
