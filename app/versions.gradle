@@ -87,7 +87,7 @@ deps.okhttp_logging_interceptor = "com.squareup.okhttp3:logging-interceptor:${ve
 def build_versions = [:]
 build_versions.min_sdk = 21
 build_versions.target_sdk = 28
-build_versions.build_tools = "28.0.2"
+build_versions.build_tools = "28.0.3"
 ext.build_versions = build_versions
 
 ext.deps = deps

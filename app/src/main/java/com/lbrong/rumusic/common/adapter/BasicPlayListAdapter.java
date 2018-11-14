@@ -34,13 +34,13 @@ public class BasicPlayListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
         // 复位上一个
         Song last = getData().get(playingSongPos);
         if(last != null){
-            last.getController().setPlaying(false);
+            last.setPlaying(false);
         }
         notifyItemChanged(playingSongPos);
         // 更新
         this.playingSongPos = getData().indexOf(item);
         if(playingSongPos != -1){
-            getData().get(playingSongPos).getController().setPlaying(true);
+            getData().get(playingSongPos).setPlaying(true);
         }
         // 新的
         notifyItemChanged(playingSongPos);
@@ -48,7 +48,7 @@ public class BasicPlayListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
 
     @Override
     protected void convert(BaseViewHolder helper, Song item) {
-        boolean isPlaying = item.getController().isPlaying();
+        boolean isPlaying = item.isPlaying();
         if(isPlaying){
             playingSongPos = helper.getAdapterPosition();
         }
@@ -69,6 +69,11 @@ public class BasicPlayListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
         helper.setText(R.id.tv_num,String.valueOf(helper.getAdapterPosition() + 1));
         helper.setText(R.id.tv_song_name,item.getTitle());
         helper.setText(R.id.tv_singer,item.getArtist());
+        int repeatCount = item.getRepeat();
+        if(repeatCount > 0){
+            helper.setText(R.id.tv_repeat,"R : " + repeatCount);
+        }
+        helper.setVisible(R.id.tv_repeat,repeatCount > 0);
         helper.setTextColor(R.id.tv_num,ContextCompat.getColor(
                 mContext,isPlaying ? R.color.colorAccent : R.color.textPrimary));
         helper.setTextColor(R.id.tv_song_name,ContextCompat.getColor(

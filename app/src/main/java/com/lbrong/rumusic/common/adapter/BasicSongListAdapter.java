@@ -53,7 +53,7 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
         // 更新
         this.playingSongPos = pos;
         if(playingSongPos != -1){
-            getData().get(playingSongPos).getController().setPlaying(true);
+            getData().get(playingSongPos).setPlaying(true);
         }
         // 新的
         notifyItemChanged(playingSongPos);
@@ -68,7 +68,7 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
         // 更新
         this.playingSongPos = getData().indexOf(item);
         if(playingSongPos != -1){
-            getData().get(playingSongPos).getController().setPlaying(true);
+            getData().get(playingSongPos).setPlaying(true);
         }
         // 新的
         notifyItemChanged(playingSongPos);
@@ -81,17 +81,17 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
         // 有位置信息
         if(playingSongPos != -1){
             Song item = getItem(playingSongPos);
-            if(item != null && item.getController().isPlaying()){
-                item.getController().setPlaying(false);
+            if(item != null && item.isPlaying()){
+                item.setPlaying(false);
                 notifyItemChanged(playingSongPos);
             }
         } else {
             // 没有位置信息，遍历集合
             for (int i = 0; i < getData().size(); i++) {
                 Song item = getItem(i);
-                if(item != null && item.getController().isPlaying()){
+                if(item != null && item.isPlaying()){
                     playingSongPos = i;
-                    item.getController().setPlaying(false);
+                    item.setPlaying(false);
                     notifyItemChanged(playingSongPos);
                 }
             }
@@ -126,14 +126,14 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
         Song playing = null;
         if(playingSongPos != -1){
             Song item = getItem(playingSongPos);
-            if(item != null && item.getController().isPlaying()){
+            if(item != null && item.isPlaying()){
                 playing = item;
             }
         } else {
             // 没有位置信息，遍历集合
             for (int i = 0; i < getData().size(); i++) {
                 Song item = getItem(i);
-                if(item != null && item.getController().isPlaying()){
+                if(item != null && item.isPlaying()){
                     playingSongPos = i;
                     playing = item;
                 }
@@ -177,7 +177,7 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
 
     @Override
     protected void convert(BaseViewHolder helper,final Song item) {
-        boolean isPlaying = item.getController().isPlaying();
+        boolean isPlaying = item.isPlaying();
         // cover
         WeakReference<Bitmap> wr = item.getBitmap();
         if(ObjectHelper.requireNonNull(wr)){

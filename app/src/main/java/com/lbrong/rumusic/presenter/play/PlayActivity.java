@@ -15,10 +15,13 @@ import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.TextUtils;
 import android.transition.Transition;
 import android.transition.TransitionInflater;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.SeekBar;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
@@ -39,6 +42,7 @@ import com.lbrong.rumusic.view.play.PlayDelegate;
 import com.lbrong.rumusic.view.widget.ListSwipeHelperCallback;
 import org.litepal.LitePal;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -58,7 +62,7 @@ import io.reactivex.schedulers.Schedulers;
 public class PlayActivity
        extends ActivityPresenter<PlayDelegate>
        implements View.OnClickListener, SeekBar.OnSeekBarChangeListener, OnPlayMethodChangeListener
-        , BaseQuickAdapter.OnItemClickListener,BaseQuickAdapter.OnItemChildClickListener {
+        , BaseQuickAdapter.OnItemClickListener,BaseQuickAdapter.OnItemChildClickListener,PopupMenu.OnMenuItemClickListener {
 
     // 播放服务
     private PlayService playService;
@@ -72,6 +76,8 @@ public class PlayActivity
     private ListSwipeHelperCallback<Song> swipeCallback;
     // 播放列表适配器
     private BasicPlayListAdapter playListAdapter;
+    // 播放列表显示菜单的item在列表种的位置
+    private int playListMenuIndex = -1;
 
     @Override
     protected Class<PlayDelegate> getDelegateClass() {
@@ -80,7 +86,7 @@ public class PlayActivity
 
     @Override
     protected boolean isFullScreen() {
-        return false;
+        return true;
     }
 
     @Override
@@ -260,7 +266,10 @@ public class PlayActivity
      */
     @Override
     public void onItemChildClick(BaseQuickAdapter adapter, View view, int position) {
-
+        // 记录索引
+        playListMenuIndex = position;
+        // 显示菜单
+        showPlayListMenu(view);
     }
 
     /**
@@ -269,10 +278,81 @@ public class PlayActivity
     @Override
     public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
         Object obj = adapter.getItem(position);
-        if(obj instanceof Song){
+        if(obj instanceof Song && playService != null){
             Song item = (Song) obj;
-            viewDelegate.toast(item.getTitle());
+            Song playing = playService.getCurrentAudio();
+            // 选中播放的音乐和当前播放音乐相同，就不做处理
+            if(!item.equals(playing)){
+                playService.setAudio(item);
+                playService.playAudio();
+            }
         }
+    }
+
+    /**
+     * 菜单选项点击
+     */
+    @Override
+    public boolean onMenuItemClick(MenuItem item) {
+        if (playListMenuIndex != -1 && playService != null){
+            // 拿到正在播放的歌曲
+            List<Long> ids = playService.getSongListIds();
+            long id = ids.get(playListMenuIndex);
+            Song song = LitePal.find(Song.class,id);
+            // 分析动作
+            switch (item.getItemId()){
+                // 马上播放
+                case R.id.action_play:
+                    if(!song.equals(playService.getCurrentAudio())){
+                        playService.setAudio(song);
+                        playService.playAudio();
+                    }
+                    break;
+                // 下一首播放
+                case R.id.action_next:
+                    // 删除原来
+                    ids.remove(id);
+                    // 当前播放歌曲的id
+                    long nowId = playService.getCurrentAudio().getId();
+                    // 位置
+                    int nowIndex = ids.indexOf(nowId);
+                    // 添加
+                    ids.add(nowIndex + 1,id);
+                    // 更新播放列表状态
+                    if(playListAdapter != null){
+                        List<Song> list = playListAdapter.getData();
+                        // 删除
+                        list.remove(song);
+                        // 添加
+                        list.add(nowIndex + 1,song);
+                        // 刷新
+                        playListAdapter.notifyDataSetChanged();
+                    }
+                    break;
+                // 重复播放
+                case R.id.action_repeat:
+                    int repeat = song.getRepeat();
+                    song.setRepeat(++repeat);
+                    song.updateAsync(song.getId());
+                    // 如果是正在播放的歌曲
+                    if(song.equals(playService.getCurrentAudio())){
+                        playService.getCurrentAudio().setRepeat(song.getRepeat());
+                    }
+                    break;
+                // 取消歌曲重复
+                case R.id.action_cancel_repeat:
+                    song.setRepeat(0);
+                    song.updateAsync(song.getId());
+                    // 如果是正在播放的歌曲
+                    if(song.equals(playService.getCurrentAudio())){
+                        playService.getCurrentAudio().setRepeat(0);
+                    }
+                    break;
+            }
+            // 重置索引
+            playListMenuIndex = -1;
+        }
+        return false;
     }
 
     /**
@@ -442,18 +522,12 @@ public class PlayActivity
                     public List<Song> call(){
                         // 获取播放列表ids
                         List<Long> ids = playService.getSongListIds();
-                        // 获取对应的歌曲集合
-                        long[] temp = new long[ids.size()];
-                        for (int i = 0; i < ids.size(); i++) {
-                            temp[i] = ids.get(i);
-                        }
                         // 数据库取出对应数据
-                        List<Song> songs = LitePal.findAll(Song.class,temp);
-                        // 更新更在播放的音乐状态
-                        Song playing = playService.getCurrentAudio();
-                        int index = songs.indexOf(playing);
-                        songs.remove(playing);
-                        songs.add(index,playing);
+                        List<Song> songs = new ArrayList<>(ids.size());
+                        // 获取对应的歌曲集合,findAll方法顺序不根据id排序，所以只能遍历
+                        for (int i = 0; i < ids.size(); i++) {
+                            songs.add(LitePal.find(Song.class,ids.get(i)));
+                        }
                         return songs;
                     }
                 })
@@ -547,5 +621,17 @@ public class PlayActivity
             ItemTouchHelper helper = new ItemTouchHelper(swipeCallback);
             helper.attachToRecyclerView((RecyclerView) viewDelegate.get(R.id.rv_list));
         }
+    }
+
+    /**
+     * 显示播放列表菜单
+     * @param anchor 锚点
+     */
+    public void showPlayListMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        popup.setOnMenuItemClickListener(this);
+        MenuInflater inflater = popup.getMenuInflater();
+        inflater.inflate(R.menu.play_list_controll, popup.getMenu());
+        popup.show();
     }
 }

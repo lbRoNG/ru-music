@@ -69,7 +69,7 @@ public final class MusicHelper {
                     int isMusic = cursor.getInt(cursor.getColumnIndex(MediaStore.Audio.Media.IS_MUSIC));
 
                     if (isMusic != 0 && duration / (500 * 60) >= 1) {
-                        m.setId(id);
+                        m.setSongId(id);
                         m.setTitle(title);
                         m.setArtist(artist);
                         m.setDuration(duration);
@@ -212,5 +212,20 @@ public final class MusicHelper {
             return LitePal.find(Song.class, previousId);
         }
         return null;
+    }
+
+    /**
+     * 播放歌曲时同步歌曲在数据库种的状态
+     */
+    public void setSongPlayingState(Song currentAudio){
+        // 复位之前播放歌曲的状态
+        Song last = LitePal.where("state=1").findFirst(Song.class);
+        if(last != null){
+            last.setPlaying(false);
+            last.save();
+        }
+        // 更新状态，并同步到数据库
+        currentAudio.setPlaying(true);
+        currentAudio.update(currentAudio.getId());
     }
 }

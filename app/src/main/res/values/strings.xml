@@ -17,13 +17,16 @@
     <string name="nav_item_cache">缓存管理</string>
 
     <string name="action_search">搜索</string>
+    <string name="action_play">播放</string>
+    <string name="action_next_play">下一首播放</string>
+    <string name="action_repeat_play">重复一次</string>
+    <string name="action_cancel_repeat_play">取消重复</string>
 
     <string name="main_tab_mine">我的</string>
     <string name="main_tab_song_list">歌单</string>
     <string name="main_tab_fm">FM</string>
 
     <string name="play_detail_song_list">歌单</string>
-
     <string name="play_detail_play_list">播放列表</string>
 
 

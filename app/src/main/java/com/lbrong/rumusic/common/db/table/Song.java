@@ -1,10 +1,8 @@
 package com.lbrong.rumusic.common.db.table;
 
 import android.graphics.Bitmap;
-
 import org.litepal.annotation.Column;
 import org.litepal.crud.LitePalSupport;
-
 import java.lang.ref.WeakReference;
 import java.util.Objects;
 
@@ -15,6 +13,7 @@ import java.util.Objects;
 public class Song extends LitePalSupport {
     @Column(unique = true)
     private long id;
+    private long songId;
     private long albumId;
     @Column(defaultValue = "未知")
     private String album;
@@ -27,8 +26,9 @@ public class Song extends LitePalSupport {
     private long duration;
     private int music;
     private int bitrate;
-    @Column(ignore = true)
-    private PlayController controller;
+    // 0 - 正常，1 - 播放中
+    private int state;
+    private int repeat;
     @Column(ignore = true)
     private WeakReference<Bitmap> bitmap;
 
@@ -37,7 +37,8 @@ public class Song extends LitePalSupport {
         if (this == o) return true;
         if (!(o instanceof Song)) return false;
         Song song = (Song) o;
-        return getId() == song.getId() &&
+        return  getId() == song.getId() &&
+                getSongId() == song.getSongId() &&
                 getAlbumId() == song.getAlbumId() &&
                 getSize() == song.getSize() &&
                 getDuration() == song.getDuration();
@@ -45,27 +46,39 @@ public class Song extends LitePalSupport {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getAlbumId(), getSize(), getDuration());
+        return Objects.hash(getId(),getSongId(), getAlbumId(), getSize(), getDuration());
     }
 
-    public class PlayController {
-        private boolean playing;
-
-        public boolean isPlaying() {
-            return playing;
-        }
-
-        public void setPlaying(boolean playing) {
-            this.playing = playing;
-        }
+    public void setPlaying(boolean playing){
+        this.state = playing ? 1 : 0;
     }
 
-    public PlayController getController() {
-        return controller == null ? controller = new PlayController() : controller;
+    public boolean isPlaying(){
+        return this.state == 1;
     }
 
-    public void setController(PlayController controller) {
-        this.controller = controller;
+    public int getState() {
+        return state;
+    }
+
+    public void setState(int state) {
+        this.state = state;
+    }
+
+    public int getRepeat() {
+        return repeat;
+    }
+
+    public void setRepeat(int repeat) {
+        this.repeat = repeat;
+    }
+
+    public long getSongId() {
+        return songId;
+    }
+
+    public void setSongId(long songId) {
+        this.songId = songId;
     }
 
     public int getBitrate() {

@@ -380,8 +380,11 @@ public class MineFragment
                         playService = service;
                         service.setAudio(item);
                         service.playAudio();
-                        service.setSongListName(SONGLIST);
-                        service.setSongListIds(songListIds);
+                        // 已存在播放列表就不需要更新
+                        if(!TextUtils.equals(SONGLIST,service.getSongListName())){
+                            service.setSongListName(SONGLIST);
+                            service.setSongListIds(songListIds);
+                        }
                     }
                 });
             } else {

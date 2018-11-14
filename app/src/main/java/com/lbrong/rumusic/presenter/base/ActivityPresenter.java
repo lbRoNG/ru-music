@@ -18,16 +18,20 @@ package com.lbrong.rumusic.presenter.base;
 import android.arch.lifecycle.LifecycleObserver;
 import android.os.Bundle;
 import android.support.annotation.StringRes;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
+
+import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.net.RequestHelper;
 import com.lbrong.rumusic.common.net.api.ApiService;
 import com.lbrong.rumusic.common.utils.DensityUtils;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
+import com.lbrong.rumusic.common.utils.StatusBarUtils;
 import com.lbrong.rumusic.common.utils.SystemUtils;
 import com.lbrong.rumusic.view.base.IDelegate;
 import com.trello.rxlifecycle2.LifecycleTransformer;
@@ -50,7 +54,6 @@ import io.reactivex.schedulers.Schedulers;
 public abstract class ActivityPresenter<T extends IDelegate> extends RxAppCompatActivity {
     protected T viewDelegate;
     protected ApiService apiService;
-    protected LifecycleObserver lifecycleObserver;
     private CompositeDisposable disposableContainer;
     private AtomicInteger waitTaskCount;
     private Disposable waitDisposable;
@@ -76,7 +79,7 @@ public abstract class ActivityPresenter<T extends IDelegate> extends RxAppCompat
         setContentView(viewDelegate.getRootView());
         // 是否全屏模式
         if(isFullScreen()){
-            SystemUtils.setFullScreen(this);
+            StatusBarUtils.setFullScreen(this);
         }
         // 设置适配
         setDensityCompat();
@@ -100,15 +103,27 @@ public abstract class ActivityPresenter<T extends IDelegate> extends RxAppCompat
         DensityUtils.setDefault(this);
     }
 
+    /**
+     * 是否启动全屏模式
+     */
     protected boolean isFullScreen(){
         return false;
     }
 
+    /**
+     * 初始化
+     */
     protected void init(){}
 
+    /**
+     * 设置布局前的设置
+     */
     protected void setting(){}
 
-    public <T> LifecycleTransformer<T> bindToLife(ActivityEvent event) {
+    /**
+     * 绑定生命周期
+     */
+    protected <T> LifecycleTransformer<T> bindToLife(ActivityEvent event) {
         return bindUntilEvent(event);
     }
 
@@ -288,10 +303,6 @@ public abstract class ActivityPresenter<T extends IDelegate> extends RxAppCompat
             disposableContainer = null;
         }
 
-        if(ObjectHelper.requireNonNull(lifecycleObserver)){
-            getLifecycle().removeObserver(lifecycleObserver);
-            lifecycleObserver = null;
-        }
         cancelWaitTask();
     }
 

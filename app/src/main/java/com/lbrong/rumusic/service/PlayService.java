@@ -10,12 +10,18 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
+import android.widget.Toast;
+
+import com.lbrong.rumusic.application.AppContext;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
 import com.lbrong.rumusic.common.utils.SettingHelper;
+
+import org.litepal.LitePal;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -111,6 +117,9 @@ public class PlayService extends Service {
     public void playAudio(){
         if(currentAudio != null && !TextUtils.isEmpty(currentAudio.getUrl())
                 && mPlayer != null){
+            // 同步状态
+            MusicHelper.build().setSongPlayingState(currentAudio);
+            // 开始播放
             try {
                 mPlayer.prepareAsync();
                 mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
@@ -242,22 +251,38 @@ public class PlayService extends Service {
                                 && currentAudio != null && mPlayer != null){
                             // 停止原来的播放
                             mPlayer.stop();
-                            // 当前id
-                            long id = currentAudio.getId();
-                            Song song = MusicHelper.build().getNext(songListIds,randomSongListIds,id,fromUser);
-                            if(song != null){
-                                if(song.getId() == 0){
-                                    // 全部播放完成
-                                    SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_ALL_COMPLETE);
-                                } else {
-                                    song.getController().setPlaying(true);
-                                    currentAudio = song;
-                                    setAudio(currentAudio);
-                                    playAudio();
-                                }
+                            // 查询是否重复播放当前歌曲
+                            int repeat = currentAudio.getRepeat();
+                            // 用户操作下一首不检查重复次数，并且清空
+                            if(repeat > 0 && !fromUser){
+                                // 需要重复
+                                // 刷新重复次数
+                                currentAudio.setRepeat(--repeat);
+                                // 开始播放
+                                setAudio(currentAudio);
+                                playAudio();
                             } else {
-                                // 找不到对应歌曲，停止播放
-                                SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
+                                // 此判断表示当前歌曲有重复播放任务，但是是用户操作下一首不是自动切换下一首
+                                // 用户切换歌曲就清空重复任务
+                                if(fromUser){
+                                    currentAudio.setRepeat(0);
+                                }
+                                // 当前id
+                                long id = currentAudio.getId();
+                                Song song = MusicHelper.build().getNext(songListIds,randomSongListIds,id,fromUser);
+                                if(song != null){
+                                    if(song.getId() == 0){
+                                        // 全部播放完成
+                                        SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_ALL_COMPLETE);
+                                    } else {
+                                        currentAudio = song;
+                                        setAudio(currentAudio);
+                                        playAudio();
+                                    }
+                                } else {
+                                    // 找不到对应歌曲，停止播放
+                                    SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
+                                }
                             }
                         }
                         return true;
@@ -288,7 +313,6 @@ public class PlayService extends Service {
                             long id = currentAudio.getId();
                             Song song = MusicHelper.build().getPrevious(songListIds,randomSongListIds,id);
                             if(song != null){
-                                song.getController().setPlaying(true);
                                 currentAudio = song;
                                 setAudio(currentAudio);
                                 playAudio();
