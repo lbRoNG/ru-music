@@ -3,6 +3,7 @@
     <string name="none_data">没有相关数据，点我刷新试试</string>
     <string name="server_error">遇到不可预料的问题，点我刷新试试</string>
     <string name="none_network">当前网络不可用，点我刷新试试</string>
+    <string name="load">等等我哦&#8230;</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -13,6 +14,7 @@
     <string name="nav_item_other">其他</string>
     <string name="nav_item_setting">设置</string>
     <string name="nav_item_play">播放管理</string>
+    <string name="nav_item_sync">扫描音乐</string>
     <string name="nav_item_download">下载管理</string>
     <string name="nav_item_cache">缓存管理</string>
 

@@ -20,6 +20,7 @@ import com.lbrong.rumusic.common.adapter.BasicSongListAdapter;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.event.home.PageRefresh;
+import com.lbrong.rumusic.common.event.music.DiskMusicChange;
 import com.lbrong.rumusic.common.net.rx.subscriber.DefaultSubscriber;
 import com.lbrong.rumusic.common.utils.ImageUtils;
 import com.lbrong.rumusic.common.utils.MusicHelper;
@@ -35,9 +36,12 @@ import com.lbrong.rumusic.view.widget.ErrorView;
 import com.tbruyelle.rxpermissions2.RxPermissions;
 
 import org.litepal.LitePal;
+import org.reactivestreams.Publisher;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -100,12 +104,35 @@ public class MineFragment
                         }
                     }
                 });
+
+        // 本地音乐改变
+        SendEventUtils.observe(EventStringKey.Music.MUSIC_DISK_REFRESH,DiskMusicChange.class)
+                .observe(this, new Observer<DiskMusicChange>() {
+                    @Override
+                    public void onChanged(@Nullable DiskMusicChange diskMusicChange) {
+                        if(diskMusicChange != null){
+                            // 刷新
+                            getLocalMusic();
+                            // 提示
+                            String sb = "已添加:" +
+                                    diskMusicChange.getAddCount() +
+                                    "首歌" +
+                                    "\n" +
+                                    "已删除:" +
+                                    diskMusicChange.getRemoveCount() +
+                                    "首歌";
+                            viewDelegate.toast(sb);
+                        }
+                    }
+                });
+
         // 播放状态改变监听
         SendEventUtils.observe(EventStringKey.Music.MUSIC_STATE,String.class)
                 .observe(this, new Observer<String>() {
                     @Override
                     public void onChanged(@Nullable String s) {
                         if(!TextUtils.isEmpty(s)){
+                            assert s != null;
                             switch (s){
                                 case EventStringKey.Music.MUSIC_PLAY:
                                     // 歌曲播放
@@ -143,6 +170,10 @@ public class MineFragment
                                     break;
                                 case EventStringKey.Music.MUSIC_COMPLETE:
                                     // 单首播放完成
+                                    break;
+                                case EventStringKey.Music.MUSIC_FAIL:
+                                    // 播放失败
+                                    viewDelegate.toast("该歌曲GG了");
                                     break;
                             }
                         }
@@ -251,22 +282,37 @@ public class MineFragment
 
     /**
      * 获取本地音乐
+     * 主要通过自身数据库管理，只在数据库没有歌曲的时候，去扫描媒体库，其余时候都直接使用本地数据库
      */
     private void getLocalMusic() {
         addDisposable(
                 Flowable.fromCallable(new Callable<List<Song>>() {
                     @Override
                     public List<Song> call() {
-                        return MusicHelper.build().getLocalMusic(getActivity());
+                        return LitePal.findAll(Song.class);
                     }
                 }).subscribeOn(Schedulers.io())
                         .observeOn(Schedulers.computation())
+                        .map(new Function<List<Song>, List<Song>>(){
+                            @Override
+                            public List<Song> apply(List<Song> songs){
+                                return ObjectHelper.requireNonNull(songs)
+                                        ? songs
+                                        : MusicHelper.build().getLocalMusic(getActivity());
+                            }
+                        })
                         .map(new Function<List<Song>, List<Song>>() {
                             @Override
                             public List<Song> apply(List<Song> songs){
-                                // 保存到本地数据库
-                                LitePal.deleteAll(Song.class);
-                                LitePal.saveAll(songs);
+                                // 查看来源
+                                long id = songs.get(0).getId();
+                                if(id == 0){
+                                    // 本地扫描
+                                    // 添加到数据库
+                                    LitePal.saveAll(songs);
+                                    // 更新数据流
+                                    songs = LitePal.findAll(Song.class);
+                                }
                                 // 记录ids
                                 songListIds = new ArrayList<>();
                                 for (Song item : songs) {
@@ -380,19 +426,31 @@ public class MineFragment
                         playService = service;
                         service.setAudio(item);
                         service.playAudio();
-                        // 已存在播放列表就不需要更新
-                        if(!TextUtils.equals(SONGLIST,service.getSongListName())){
-                            service.setSongListName(SONGLIST);
-                            service.setSongListIds(songListIds);
-                        }
+                        // 复制集合
+                        updateSongList();
                     }
                 });
             } else {
                 // 播放音乐
                 playService.setAudio(item);
                 playService.playAudio();
+                // 已存在播放列表就不需要更新
+                if((!TextUtils.equals(SONGLIST,playService.getSongListName()))
+                        || songListIds.size() != playService.getSongListIds().size()){
+                    updateSongList();
+                }
             }
         }
+    }
+
+    /**
+     * 更新播放列表id集合
+     */
+    private void updateSongList(){
+        List<Long> copy = new ArrayList<>(Arrays.asList(new Long[songListIds.size()]));
+        Collections.copy(copy,songListIds);
+        playService.setSongListName(SONGLIST);
+        playService.setSongListIds(copy);
     }
 
     /**

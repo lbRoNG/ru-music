@@ -24,6 +24,7 @@ public class Song extends LitePalSupport {
     private String url;
     private long size;
     private long duration;
+    private long record;
     private int music;
     private int bitrate;
     // 0 - 正常，1 - 播放中
@@ -37,8 +38,7 @@ public class Song extends LitePalSupport {
         if (this == o) return true;
         if (!(o instanceof Song)) return false;
         Song song = (Song) o;
-        return  getId() == song.getId() &&
-                getSongId() == song.getSongId() &&
+        return getSongId() == song.getSongId() &&
                 getAlbumId() == song.getAlbumId() &&
                 getSize() == song.getSize() &&
                 getDuration() == song.getDuration();
@@ -90,7 +90,7 @@ public class Song extends LitePalSupport {
     }
 
     public WeakReference<Bitmap> getBitmap() {
-        return bitmap;
+        return bitmap == null ? new WeakReference<Bitmap>(null) : bitmap;
     }
 
     public void setBitmap(WeakReference<Bitmap> bitmap) {
@@ -167,5 +167,13 @@ public class Song extends LitePalSupport {
 
     public void setAlbum(String album) {
         this.album = album;
+    }
+
+    public long getRecord() {
+        return record;
+    }
+
+    public void setRecord(long record) {
+        this.record = record;
     }
 }

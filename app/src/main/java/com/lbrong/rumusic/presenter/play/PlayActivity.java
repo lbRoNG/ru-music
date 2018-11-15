@@ -327,26 +327,20 @@ public class PlayActivity
                         list.add(nowIndex + 1,song);
                         // 刷新
                         playListAdapter.notifyDataSetChanged();
-                    }
+            }
                     break;
                 // 重复播放
                 case R.id.action_repeat:
                     int repeat = song.getRepeat();
                     song.setRepeat(++repeat);
-                    song.updateAsync(song.getId());
-                    // 如果是正在播放的歌曲
-                    if(song.equals(playService.getCurrentAudio())){
-                        playService.getCurrentAudio().setRepeat(song.getRepeat());
-                    }
+                    song.save();
+                    playListAdapter.notifyDataSetChanged();
                     break;
                 // 取消歌曲重复
                 case R.id.action_cancel_repeat:
                     song.setRepeat(0);
-                    song.updateAsync(song.getId());
-                    // 如果是正在播放的歌曲
-                    if(song.equals(playService.getCurrentAudio())){
-                        playService.getCurrentAudio().setRepeat(0);
-                    }
+                    song.save();
+                    playListAdapter.notifyDataSetChanged();
                     break;
             }
             // 重置索引
@@ -583,7 +577,7 @@ public class PlayActivity
         if(swipeCallback == null && ObjectHelper.requireNonNull(songs)){
             swipeCallback = new ListSwipeHelperCallback<Song>(songs) {
                 @Override
-                public void notifyDismiss(int pos, Song item) {
+                public void notifyDismiss(final int pos, Song item) {
                     if(playListAdapter != null){
                         // 更新列表
                         playListAdapter.getData().remove(pos);
@@ -593,11 +587,23 @@ public class PlayActivity
                         if(playService != null){
                             // 正在播放的歌曲，直接下一首
                             if(item.equals(playService.getCurrentAudio())){
+                                // 下一首
                                 playService.next(true);
+                                // 延时更改集合，因为next是异步任务
+                                addDisposable(
+                                        Observable.timer(300,TimeUnit.MILLISECONDS)
+                                                .subscribeOn(Schedulers.computation())
+                                                .subscribe(new Consumer<Long>() {
+                                                    @Override
+                                                    public void accept(Long aLong){
+                                                        playService.getSongListIds().remove(pos);
+                                                    }
+                                                })
+                                );
+                                return;
                             }
                             // 更新服务播放列表
-                            List<Long> ids = playService.getSongListIds();
-                            ids.remove(pos);
+                            playService.getSongListIds().remove(pos);
                         }
                     }
                 }

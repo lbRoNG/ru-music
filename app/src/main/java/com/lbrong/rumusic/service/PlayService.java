@@ -10,18 +10,12 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
-import android.widget.Toast;
-
-import com.lbrong.rumusic.application.AppContext;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
 import com.lbrong.rumusic.common.utils.SettingHelper;
-
-import org.litepal.LitePal;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,9 +23,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 
@@ -40,7 +36,7 @@ import io.reactivex.schedulers.Schedulers;
  * @since 2018/10/22
  * 音乐播放服务
  */
-public class PlayService extends Service {
+public class PlayService extends Service implements MediaPlayer.OnCompletionListener {
     private MediaPlayer mPlayer;
     // 正在播放的音乐
     private Song currentAudio;
@@ -50,6 +46,8 @@ public class PlayService extends Service {
     private List<Long> randomSongListIds;
     // 歌单名称
     private String songListName;
+    // 记录任务
+    private Disposable recordTask;
     // 任务集合
     private CompositeDisposable compositeDisposable;
 
@@ -103,6 +101,7 @@ public class PlayService extends Service {
                     mPlayer.setDataSource(getApplicationContext()
                             ,Uri.fromFile(new File(currentAudio.getUrl())));
                 } catch (IllegalStateException e){
+                    playFail();
                     e.printStackTrace();
                 }
             }
@@ -127,24 +126,41 @@ public class PlayService extends Service {
                     public void onPrepared(MediaPlayer mp) {
                         // 准备完毕开始播放
                         mPlayer.start();
+                        // 开启记录
+                        startRecord();
                         // 发送播放音乐的通知
-                        SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PLAY);
+                        SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PLAY);
                     }
                 });
 
-                mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    @Override
-                    public void onCompletion(MediaPlayer mp) {
-                        // 发送播放完成的通知
-                        SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_COMPLETE);
-                        // 查看配置是否需要自动播放
-                        if(SettingHelper.build().isAutoNext()){
-                            next(false);
-                        }
-                    }
-                });
+                mPlayer.setOnCompletionListener(PlayService.this);
             } catch (IllegalStateException e){
                 playFail();
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 重新准备歌曲，准备完处于等待状态
+     * 用于退出app后恢复播放
+     */
+    public void rePrepare(final int start){
+        if(currentAudio != null && !TextUtils.isEmpty(currentAudio.getUrl())
+                && mPlayer != null){
+            try {
+                mPlayer.prepareAsync();
+                mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                    @Override
+                    public void onPrepared(MediaPlayer mp) {
+                        mPlayer.start();
+                        mPlayer.seekTo(start);
+                        mPlayer.pause();
+                    }
+                });
+
+                mPlayer.setOnCompletionListener(PlayService.this);
+            } catch (IllegalStateException e){
                 e.printStackTrace();
             }
         }
@@ -154,7 +170,10 @@ public class PlayService extends Service {
      * 播放失败
      */
     public void playFail(){
-
+        if(mPlayer != null){
+            mPlayer.stop();
+        }
+        SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_FAIL);
     }
 
     /**
@@ -167,7 +186,7 @@ public class PlayService extends Service {
             } else {
                 mPlayer.start();
             }
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_RE_PLAY);
+            SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_RE_PLAY);
         }
     }
 
@@ -177,7 +196,7 @@ public class PlayService extends Service {
     public void seekTo(int mesc){
         if(mPlayer != null){
             mPlayer.seekTo(mesc);
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_SEEK_TO);
+            SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_SEEK_TO);
         }
     }
 
@@ -187,7 +206,8 @@ public class PlayService extends Service {
     public void pause(){
         if(mPlayer != null && mPlayer.isPlaying()){
             mPlayer.pause();
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PAUSE);
+            stopRecord();
+            SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_PAUSE);
         }
     }
 
@@ -197,7 +217,8 @@ public class PlayService extends Service {
     public void continuePlay(){
         if(mPlayer != null && !mPlayer.isPlaying()){
             mPlayer.start();
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_CONTINUE_PLAY);
+            startRecord();
+            SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_CONTINUE_PLAY);
         }
     }
 
@@ -207,7 +228,8 @@ public class PlayService extends Service {
     public void stop(){
         if(mPlayer != null && mPlayer.isPlaying()){
             mPlayer.stop();
-            SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
+            stopRecord();
+            SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_STOP);
         }
     }
 
@@ -377,5 +399,47 @@ public class PlayService extends Service {
      */
     public List<Long> getSongListIds() {
         return songListIds;
+    }
+
+    /**
+     * 记录播放进度
+     * 10秒一同步
+     */
+    private void startRecord(){
+        if(mPlayer != null){
+            stopRecord();
+            compositeDisposable.add(
+                    recordTask = Observable.interval(0,10,TimeUnit.SECONDS)
+                            .subscribeOn(Schedulers.computation())
+                            .subscribe(new Consumer<Long>() {
+                                @Override
+                                public void accept(Long aLong){
+                                    if (mPlayer.isPlaying()){
+                                        currentAudio.setRecord(mPlayer.getCurrentPosition());
+                                        currentAudio.update(currentAudio.getId());
+                                    }
+                                }
+                            })
+            );
+        }
+    }
+
+    /**
+     * 停止记录
+     */
+    private void stopRecord(){
+        if(recordTask != null && !recordTask.isDisposed()){
+            recordTask.dispose();
+        }
+    }
+
+    @Override
+    public void onCompletion(MediaPlayer mp) {
+        // 发送播放完成的通知
+        SendEventUtils.sendForBack(EventStringKey.Music.MUSIC_STATE,EventStringKey.Music.MUSIC_COMPLETE);
+        // 查看配置是否需要自动播放
+        if(SettingHelper.build().isAutoNext()){
+            next(false);
+        }
     }
 }

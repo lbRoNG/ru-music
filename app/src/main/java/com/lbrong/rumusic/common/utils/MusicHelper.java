@@ -9,18 +9,14 @@ import android.media.MediaMetadataRetriever;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.type.PlayMethodEnum;
-
 import org.litepal.LitePal;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
-
 /**
  * @author lbRoNG
  * @since 2018/10/18
@@ -222,10 +218,40 @@ public final class MusicHelper {
         Song last = LitePal.where("state=1").findFirst(Song.class);
         if(last != null){
             last.setPlaying(false);
+            last.setRecord(0);
             last.save();
         }
         // 更新状态，并同步到数据库
         currentAudio.setPlaying(true);
         currentAudio.update(currentAudio.getId());
+    }
+
+    /**
+     * 扫描磁盘音乐，同步歌曲
+     */
+    public int[] syncMusic(@NonNull Context context){
+        // 获取本地音乐
+        List<Song> disk = getLocalMusic(context);
+        // 对比增量添加
+        int addCount = 0;
+        for (Song item : disk) {
+            Song temp = LitePal.where("songid="+item.getSongId()).findFirst(Song.class);
+            if(temp == null){
+                addCount++;
+                item.save();
+            }
+        }
+        // 数据库音乐
+        int removeCount = 0;
+        List<Song> db = LitePal.findAll(Song.class);
+        // 对比是否有删除
+        for (Song temp : db) {
+            // 不包含证明本地已经删除
+            if(!disk.contains(temp)){
+                removeCount++;
+                LitePal.deleteAll(Song.class,"songid="+temp.getSongId());
+            }
+        }
+        return new int[]{addCount,removeCount};
     }
 }

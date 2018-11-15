@@ -14,10 +14,13 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.text.TextUtils;
 import android.view.MenuItem;
-
 import com.lbrong.rumusic.R;
+import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.event.home.PageRefresh;
+import com.lbrong.rumusic.common.event.music.DiskMusicChange;
+import com.lbrong.rumusic.common.net.rx.subscriber.ProgressDialogSubscriber;
+import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
 import com.lbrong.rumusic.iface.callback.OnBindPlayServiceSuccess;
 import com.lbrong.rumusic.iface.listener.OnPlayControllerClickListener;
@@ -26,8 +29,13 @@ import com.lbrong.rumusic.presenter.play.PlayActivity;
 import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.home.MainDelegate;
 
-import java.util.concurrent.TimeUnit;
+import org.litepal.LitePal;
+import org.litepal.crud.callback.FindCallback;
 
+import java.io.FileReader;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -64,6 +72,8 @@ public class MainActivity
         super.init();
         // 启动服务
         startService(new Intent(this,PlayService.class));
+        // 检查数据库有没有正在播放的歌曲，复位正在播放的歌曲
+        recoverPlay();
     }
 
     @Override
@@ -104,6 +114,10 @@ public class MainActivity
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         switch (item.getItemId()){
+            // 同步磁盘音乐
+            case R.id.nav_sync:
+                syncMusic();
+                break;
             case R.id.nav_play:
                 break;
             case R.id.nav_cache:
@@ -290,5 +304,76 @@ public class MainActivity
                             }
                         })
         );
+    }
+
+    /**
+     * 扫描磁盘音乐，同步歌曲
+     */
+    private void syncMusic(){
+        addDisposable(
+                Flowable.fromCallable(new Callable<int[]>() {
+                    @Override
+                    public int[] call() {
+                        return MusicHelper.build().syncMusic(MainActivity.this);
+                    }
+                }).subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribeWith(new ProgressDialogSubscriber<int[]>(this){
+                            @Override
+                            public void onNext(int[] change) {
+                                if(change[0] != 0 || change[1] != 0){
+                                    // 有修改
+                                    SendEventUtils.sendForMain(EventStringKey.Music.MUSIC_DISK_REFRESH
+                                            ,new DiskMusicChange(change[0],change[1]));
+                                } else {
+                                    viewDelegate.toast("本地音乐没有要同步的哦~");
+                                }
+                            }
+                        })
+        );
+    }
+
+    /**
+     * 恢复播放状态
+     */
+    private void recoverPlay(){
+        LitePal.where("state=1")
+                .findFirstAsync(Song.class)
+                .listen(new FindCallback<Song>() {
+                    @Override
+                    public void onFinish(final Song song) {
+                        if(song != null){
+                            //　先绑定服务
+                            bindPlayService(new OnBindPlayServiceSuccess() {
+                                @Override
+                                public void success(PlayService service) {
+                                    Song back = service.getCurrentAudio();
+                                    int record = back != null
+                                            ? playService.getCurrentPosition()
+                                            : (int)(song.getRecord());
+                                    int duration = (int)(song.getDuration());
+                                    // 控制器
+                                    viewDelegate.initController(
+                                            song.getArtist(),
+                                            song.getTitle(),
+                                            record,duration);
+                                    viewDelegate.setControllerProgress(record);
+                                    // 暂停状态
+                                    viewDelegate.setControllerStyle(
+                                            service.isPlaying() ? 1 : 0);
+                                    // 显示
+                                    viewDelegate.showController();
+                                    // 是否更新进度
+                                    if(service.isPlaying()){
+                                        startPlayControllerTimer(record,duration);
+                                    } else {
+                                        playService.setAudio(song);
+                                        playService.rePrepare(record);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
     }
 }

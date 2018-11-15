@@ -218,10 +218,13 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
         helper.itemView.setLayoutParams(layoutParams);
         // 设置进度条
         int max = (int) (item.getDuration() / 1000);
+        int record = (int) (item.getRecord() / 1000);
         ProgressBar pb = helper.getView(R.id.view_progress);
         pb.setMax(max);
+        pb.setProgress(record);
         SeekBar bar = helper.getView(R.id.skb_song);
         bar.setMax(max);
+        bar.setProgress(record);
         bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
