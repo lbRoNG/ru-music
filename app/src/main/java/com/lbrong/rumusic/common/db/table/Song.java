@@ -9,6 +9,7 @@ import java.util.Objects;
 /**
  * @author lbRoNG
  * @since 2018/10/18
+ * 单曲
  */
 public class Song extends LitePalSupport {
     @Column(unique = true)
@@ -21,15 +22,12 @@ public class Song extends LitePalSupport {
     private String title;
     @Column(defaultValue = "群星")
     private String artist;
+    private long artistId;
     private String url;
     private long size;
     private long duration;
-    private long record;
     private int music;
     private int bitrate;
-    // 0 - 正常，1 - 播放中
-    private int state;
-    private int repeat;
     @Column(ignore = true)
     private WeakReference<Bitmap> bitmap;
 
@@ -47,30 +45,6 @@ public class Song extends LitePalSupport {
     @Override
     public int hashCode() {
         return Objects.hash(getId(),getSongId(), getAlbumId(), getSize(), getDuration());
-    }
-
-    public void setPlaying(boolean playing){
-        this.state = playing ? 1 : 0;
-    }
-
-    public boolean isPlaying(){
-        return this.state == 1;
-    }
-
-    public int getState() {
-        return state;
-    }
-
-    public void setState(int state) {
-        this.state = state;
-    }
-
-    public int getRepeat() {
-        return repeat;
-    }
-
-    public void setRepeat(int repeat) {
-        this.repeat = repeat;
     }
 
     public long getSongId() {
@@ -169,11 +143,11 @@ public class Song extends LitePalSupport {
         this.album = album;
     }
 
-    public long getRecord() {
-        return record;
+    public long getArtistId() {
+        return artistId;
     }
 
-    public void setRecord(long record) {
-        this.record = record;
+    public void setArtistId(long artistId) {
+        this.artistId = artistId;
     }
 }

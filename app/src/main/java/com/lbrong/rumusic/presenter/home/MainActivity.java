@@ -28,11 +28,8 @@ import com.lbrong.rumusic.presenter.base.ActivityPresenter;
 import com.lbrong.rumusic.presenter.play.PlayActivity;
 import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.home.MainDelegate;
-
 import org.litepal.LitePal;
 import org.litepal.crud.callback.FindCallback;
-
-import java.io.FileReader;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import io.reactivex.Flowable;
@@ -350,8 +347,8 @@ public class MainActivity
                                     Song back = service.getCurrentAudio();
                                     int record = back != null
                                             ? playService.getCurrentPosition()
-                                            : (int)(song.getRecord());
-                                    int duration = (int)(song.getDuration());
+                                            : (int)(song.getRecord() / 1000);
+                                    int duration = (int)(song.getDuration() / 1000);
                                     // 控制器
                                     viewDelegate.initController(
                                             song.getArtist(),
@@ -368,7 +365,7 @@ public class MainActivity
                                         startPlayControllerTimer(record,duration);
                                     } else {
                                         playService.setAudio(song);
-                                        playService.rePrepare(record);
+                                        playService.rePrepare(record * 1000);
                                     }
                                 }
                             });

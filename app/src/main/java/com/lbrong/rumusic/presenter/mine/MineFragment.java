@@ -11,12 +11,12 @@ import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
-
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.adapter.BasicSongListAdapter;
+import com.lbrong.rumusic.common.db.table.PlaySong;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.event.home.PageRefresh;
@@ -34,17 +34,11 @@ import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.mine.MineDelegate;
 import com.lbrong.rumusic.view.widget.ErrorView;
 import com.tbruyelle.rxpermissions2.RxPermissions;
-
 import org.litepal.LitePal;
-import org.reactivestreams.Publisher;
-
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-
 import io.reactivex.Flowable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
@@ -63,8 +57,6 @@ public class MineFragment
     private PlayService playService;
     // 适配器
     private BasicSongListAdapter songAdapter;
-    // 播放列表id合集
-    private List<Long> songListIds;
     // 最后点击的时间戳
     private long lastClickMS;
     // 当前歌单名称
@@ -310,13 +302,6 @@ public class MineFragment
                                     // 本地扫描
                                     // 添加到数据库
                                     LitePal.saveAll(songs);
-                                    // 更新数据流
-                                    songs = LitePal.findAll(Song.class);
-                                }
-                                // 记录ids
-                                songListIds = new ArrayList<>();
-                                for (Song item : songs) {
-                                    songListIds.add(item.getId());
                                 }
                                 return songs;
                             }
@@ -426,7 +411,7 @@ public class MineFragment
                         playService = service;
                         service.setAudio(item);
                         service.playAudio();
-                        // 复制集合
+                        // 更新播放列表
                         updateSongList();
                     }
                 });
@@ -434,9 +419,8 @@ public class MineFragment
                 // 播放音乐
                 playService.setAudio(item);
                 playService.playAudio();
-                // 已存在播放列表就不需要更新
-                if((!TextUtils.equals(SONGLIST,playService.getSongListName()))
-                        || songListIds.size() != playService.getSongListIds().size()){
+                // 更新播放列表
+                if(songAdapter.getData().size() != playService.getPlaySongs().size()) {
                     updateSongList();
                 }
             }
@@ -447,10 +431,12 @@ public class MineFragment
      * 更新播放列表id集合
      */
     private void updateSongList(){
-        List<Long> copy = new ArrayList<>(Arrays.asList(new Long[songListIds.size()]));
-        Collections.copy(copy,songListIds);
+        List<PlaySong> copy = new ArrayList<>();
+        for (Song item : songAdapter.getData()) {
+            copy.add(new PlaySong(item.getSongId()));
+        }
         playService.setSongListName(SONGLIST);
-        playService.setSongListIds(copy);
+        playService.setPlaySongs(copy);
     }
 
     /**

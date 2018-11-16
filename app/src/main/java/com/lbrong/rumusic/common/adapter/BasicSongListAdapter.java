@@ -11,7 +11,10 @@ import android.widget.SeekBar;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
 import com.lbrong.rumusic.R;
+import com.lbrong.rumusic.common.db.DBHelper;
+import com.lbrong.rumusic.common.db.table.PlaySong;
 import com.lbrong.rumusic.common.db.table.Song;
+import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import java.lang.ref.WeakReference;
 import java.util.List;
@@ -28,8 +31,8 @@ import io.reactivex.schedulers.Schedulers;
  * 我的tab播放列表适配器
  */
 public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
-    // 正在播放的Song在适配器中的位置
-    private int playingSongPos = -1;
+    private Song playingSong;
+    private PlaySong playSong;
     private Disposable timer;
 
     protected BasicSongListAdapter(@Nullable List<Song> data) {
@@ -41,28 +44,14 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
     protected void seekBarChange(Song item,int progress){}
 
     public int getPlayingSongPos() {
-        return playingSongPos;
-    }
-
-    /**
-     * 更新新的播放item位置
-     */
-    public void updatePlayingSongPos(int pos) {
-        // 上个
-        resetSongState();
-        // 更新
-        this.playingSongPos = pos;
-        if(playingSongPos != -1){
-            getData().get(playingSongPos).setPlaying(true);
-        }
-        // 新的
-        notifyItemChanged(playingSongPos);
+        return getData().indexOf(playingSong);
     }
 
     /**
      * 更新新的播放item位置
      */
     public void updatePlayingSongPos(Song item) {
+        playSong = DBHelper.build().queryPlayingSongById(item.getSongId());
         // 上个
         resetSongState();
         // 更新
@@ -79,7 +68,7 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
      */
     public void resetSongState(){
         // 有位置信息
-        if(playingSongPos != -1){
+        if(playingSong != null){
             Song item = getItem(playingSongPos);
             if(item != null && item.isPlaying()){
                 item.setPlaying(false);

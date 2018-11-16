@@ -9,6 +9,9 @@ import android.media.MediaMetadataRetriever;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+
+import com.lbrong.rumusic.common.db.DBHelper;
+import com.lbrong.rumusic.common.db.table.PlaySong;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.type.PlayMethodEnum;
 import org.litepal.LitePal;
@@ -16,6 +19,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 /**
  * @author lbRoNG
@@ -57,6 +61,7 @@ public final class MusicHelper {
                     long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media._ID));
                     String title = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE));
                     String artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
+                    long artistId = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST_ID));
                     long duration = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.DURATION));
                     long size = cursor.getLong(cursor.getColumnIndex(MediaStore.Audio.Media.SIZE));
                     String url = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA));
@@ -68,6 +73,7 @@ public final class MusicHelper {
                         m.setSongId(id);
                         m.setTitle(title);
                         m.setArtist(artist);
+                        m.setArtistId(artistId);
                         m.setDuration(duration);
                         m.setSize(size);
                         m.setUrl(url);
@@ -107,7 +113,7 @@ public final class MusicHelper {
             }
             return bitmap;
         } catch (Exception e) {
-            //e.printStackTrace();
+            e.printStackTrace();
         }
         return null;
     }
@@ -123,23 +129,28 @@ public final class MusicHelper {
 
     /**
      * 根据播放方法和播放列表计算出下一首要播放的歌曲
-     * @param ids 播放列表ids
-     * @param randomIds 播放列表随机ids
-     * @param currentId 当前播放的id
+     * @param playSongs 播放列表
+     * @param randomPlaySongs 播放列表随机
      * @param fromUser 是否是用户主动切换
      */
-    public @Nullable Song getNext(List<Long> ids, List<Long> randomIds, long currentId, boolean fromUser){
-        if(ObjectHelper.requireNonNull(ids)
-                || ObjectHelper.requireNonNull(randomIds)){
+    public @Nullable Song getNext(List<PlaySong> playSongs, List<PlaySong> randomPlaySongs, boolean fromUser){
+        if(ObjectHelper.requireNonNull(playSongs)
+                || ObjectHelper.requireNonNull(randomPlaySongs)){
             // 播放方式
             PlayMethodEnum method = SettingHelper.build().getPlayMethod();
             if(method == PlayMethodEnum.RANDOM){
-                ids = randomIds;
+                playSongs = randomPlaySongs;
             }
             // 列表长度
-            int size = ids.size();
-            // 在列表中的位置
-            int index = ids.indexOf(currentId);
+            int size = playSongs.size();
+            // 正在播放的歌曲在列表中的位置
+            int index = 0;
+            for (int i = 0; i < playSongs.size(); i++) {
+                if(playSongs.get(i).getState() == 1){
+                    index = i;
+                    break;
+                }
+            }
             // 下一首的位置
             int next = index + 1;
             switch (method){
@@ -169,9 +180,9 @@ public final class MusicHelper {
                     break;
             }
             // 获取到id
-            long nextId = ids.get(next);
+            PlaySong nextSong = playSongs.get(next);
             // 数据库找寻对应的歌曲
-            return LitePal.find(Song.class, nextId);
+            return DBHelper.build().querySongBySongId(nextSong.getSongId());
         }
        return null;
     }
@@ -179,22 +190,27 @@ public final class MusicHelper {
     /**
      * 根据播放方法和播放列表计算出上一首要播放的歌曲
      * 触发上一曲肯定是用户主动切换
-     * @param ids 播放列表ids
-     * @param randomIds 播放列表随机ids
-     * @param currentId 当前播放的id
+     * @param playSongs 播放列表
+     * @param randomPlaySongs 播放列表随机
      */
-    public @Nullable Song getPrevious(List<Long> ids, List<Long> randomIds, long currentId){
-        if(ObjectHelper.requireNonNull(ids)
-                || ObjectHelper.requireNonNull(randomIds)){
+    public @Nullable Song getPrevious(List<PlaySong> playSongs, List<PlaySong> randomPlaySongs){
+        if(ObjectHelper.requireNonNull(playSongs)
+                || ObjectHelper.requireNonNull(randomPlaySongs)){
             // 播放方式
             PlayMethodEnum method = SettingHelper.build().getPlayMethod();
             if(method == PlayMethodEnum.RANDOM){
-                ids = randomIds;
+                playSongs = randomPlaySongs;
             }
             // 列表长度
-            int size = ids.size();
+            int size = playSongs.size();
             // 在列表中的位置
-            int index = ids.indexOf(currentId);
+            int index = 0;
+            for (int i = 0; i < playSongs.size(); i++) {
+                if(playSongs.get(i).getState() == 1){
+                    index = i;
+                    break;
+                }
+            }
             // 下一首的位置
             int previous = index - 1;
             // 随机播放依赖播放列表，下一曲的逻辑和顺序循环一样
@@ -203,27 +219,22 @@ public final class MusicHelper {
                 previous = size - 1;
             }
             // 获取到id
-            long previousId = ids.get(previous);
+            PlaySong previousSong = playSongs.get(previous);
             // 数据库找寻对应的歌曲
-            return LitePal.find(Song.class, previousId);
+            return DBHelper.build().querySongBySongId(previousSong.getSongId());
         }
         return null;
     }
 
     /**
-     * 播放歌曲时同步歌曲在数据库种的状态
+     * 播放歌曲时同步歌曲在数据库中的状态
+     * @param afterPlaySongId 新开始播放的歌曲id
      */
-    public void setSongPlayingState(Song currentAudio){
+    public void setSongPlayingState(long afterPlaySongId){
         // 复位之前播放歌曲的状态
-        Song last = LitePal.where("state=1").findFirst(Song.class);
-        if(last != null){
-            last.setPlaying(false);
-            last.setRecord(0);
-            last.save();
-        }
+        DBHelper.build().resetPlayingState();
         // 更新状态，并同步到数据库
-        currentAudio.setPlaying(true);
-        currentAudio.update(currentAudio.getId());
+        DBHelper.build().setPlayingState(afterPlaySongId);
     }
 
     /**
@@ -235,7 +246,7 @@ public final class MusicHelper {
         // 对比增量添加
         int addCount = 0;
         for (Song item : disk) {
-            Song temp = LitePal.where("songid="+item.getSongId()).findFirst(Song.class);
+            Song temp = DBHelper.build().querySongBySongId(item.getSongId());
             if(temp == null){
                 addCount++;
                 item.save();
@@ -249,9 +260,22 @@ public final class MusicHelper {
             // 不包含证明本地已经删除
             if(!disk.contains(temp)){
                 removeCount++;
-                LitePal.deleteAll(Song.class,"songid="+temp.getSongId());
+                DBHelper.build().removeSongBySongId(temp.getSongId());
             }
         }
         return new int[]{addCount,removeCount};
+    }
+
+    /**
+     * 保存播放列表
+     * @param songs 播放列表歌曲列表
+     */
+    public <T extends Collection<Song>> void savePlayList(@NonNull T songs){
+        if(ObjectHelper.requireNonNull(songs)){
+            for (Song item : songs) {
+                PlaySong song = new PlaySong(item.getSongId());
+                song.save();
+            }
+        }
     }
 }

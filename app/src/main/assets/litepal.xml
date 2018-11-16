@@ -4,5 +4,6 @@
     <version value="1" />
     <list>
         <mapping class="com.lbrong.rumusic.common.db.table.Song" />
+        <mapping class="com.lbrong.rumusic.common.db.table.PlaySong" />
     </list>
 </litepal>

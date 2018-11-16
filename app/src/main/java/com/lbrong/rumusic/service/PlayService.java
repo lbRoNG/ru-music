@@ -10,12 +10,15 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
+import com.lbrong.rumusic.common.db.DBHelper;
+import com.lbrong.rumusic.common.db.table.PlaySong;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
 import com.lbrong.rumusic.common.utils.SettingHelper;
+import org.litepal.LitePal;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,16 +43,20 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     private MediaPlayer mPlayer;
     // 正在播放的音乐
     private Song currentAudio;
+    // 正在播放的音乐控制
+    private PlaySong currentPlayControl;
     // 播放列表id合集
-    private List<Long> songListIds;
+    private List<PlaySong> playSongs;
     // 播放列表随机id合集
-    private List<Long> randomSongListIds;
+    private List<PlaySong> randomPlaySongs;
     // 歌单名称
     private String songListName;
     // 记录任务
     private Disposable recordTask;
     // 任务集合
     private CompositeDisposable compositeDisposable;
+    // 记录间隔
+    private final static int RECORD_INTERVAL = 10;
 
     public class PlayBinder extends Binder {
         public PlayService getService(){
@@ -80,7 +87,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
 
     @Override
     public void onDestroy() {
-        mPlayer.stop();
+        stop();
         mPlayer.release();
         mPlayer = null;
         compositeDisposable.clear();
@@ -94,6 +101,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     public void setAudio(@NonNull Song audio){
         try {
             currentAudio = audio;
+            currentPlayControl = DBHelper.build().queryPlayingSongAtPlayList();
 
             if(mPlayer != null && !TextUtils.isEmpty(currentAudio.getUrl())){
                 try {
@@ -117,7 +125,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         if(currentAudio != null && !TextUtils.isEmpty(currentAudio.getUrl())
                 && mPlayer != null){
             // 同步状态
-            MusicHelper.build().setSongPlayingState(currentAudio);
+            MusicHelper.build().setSongPlayingState(currentAudio.getSongId());
             // 开始播放
             try {
                 mPlayer.prepareAsync();
@@ -269,17 +277,17 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
                 Observable.fromCallable(new Callable<Boolean>() {
                     @Override
                     public Boolean call() {
-                        if(ObjectHelper.requireNonNull(songListIds)
+                        if(ObjectHelper.requireNonNull(playSongs)
                                 && currentAudio != null && mPlayer != null){
                             // 停止原来的播放
                             mPlayer.stop();
                             // 查询是否重复播放当前歌曲
-                            int repeat = currentAudio.getRepeat();
+                            int repeat = currentPlayControl.getRepeat();
                             // 用户操作下一首不检查重复次数，并且清空
                             if(repeat > 0 && !fromUser){
                                 // 需要重复
                                 // 刷新重复次数
-                                currentAudio.setRepeat(--repeat);
+                                currentPlayControl.setRepeat(--repeat);
                                 // 开始播放
                                 setAudio(currentAudio);
                                 playAudio();
@@ -287,11 +295,10 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
                                 // 此判断表示当前歌曲有重复播放任务，但是是用户操作下一首不是自动切换下一首
                                 // 用户切换歌曲就清空重复任务
                                 if(fromUser){
-                                    currentAudio.setRepeat(0);
+                                    currentPlayControl.setRepeat(0);
                                 }
                                 // 当前id
-                                long id = currentAudio.getId();
-                                Song song = MusicHelper.build().getNext(songListIds,randomSongListIds,id,fromUser);
+                                Song song = MusicHelper.build().getNext(playSongs, randomPlaySongs,fromUser);
                                 if(song != null){
                                     if(song.getId() == 0){
                                         // 全部播放完成
@@ -327,13 +334,12 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
                 Observable.fromCallable(new Callable<Boolean>() {
                     @Override
                     public Boolean call(){
-                        if(ObjectHelper.requireNonNull(songListIds)
+                        if(ObjectHelper.requireNonNull(playSongs)
                                 && currentAudio != null && mPlayer != null){
                             // 停止原来的播放
                             mPlayer.stop();
                             // 当前id
-                            long id = currentAudio.getId();
-                            Song song = MusicHelper.build().getPrevious(songListIds,randomSongListIds,id);
+                            Song song = MusicHelper.build().getPrevious(playSongs, randomPlaySongs);
                             if(song != null){
                                 currentAudio = song;
                                 setAudio(currentAudio);
@@ -362,21 +368,52 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     /**
+     * 获取当前播放的音乐在播放列表中的实体
+     */
+    public PlaySong getCurrentPlayControl() {
+        return currentPlayControl;
+    }
+
+    /**
      * 设置播放列表id合集
      */
-    public void setSongListIds(List<Long> songListIds){
-        this.songListIds = songListIds;
-        setRandomSongListIds();
+    public void setPlaySongs(final List<PlaySong> playSongs){
+        // 设置
+        this.playSongs = playSongs;
+        // 保存数据库
+        compositeDisposable.add(
+                Observable.fromCallable(new Callable<Boolean>() {
+                    @Override
+                    public Boolean call() {
+                        // 删除原来
+                        LitePal.deleteAll(PlaySong.class);
+                        // 添加
+                        for (PlaySong item : playSongs) {
+                            if(item.getSongId() == currentAudio.getSongId()){
+                                item.setState(1);
+                            }
+                            item.save();
+                        }
+                        // 生成随机列表
+                        setRandomSongListIds();
+                        return true;
+                    }
+                }).subscribeOn(Schedulers.computation())
+                        .subscribe(new Consumer<Boolean>() {
+                    @Override
+                    public void accept(Boolean aBoolean){}
+                })
+        );
     }
 
     /**
      * 重新随机
      */
     public void setRandomSongListIds(){
-        if(ObjectHelper.requireNonNull(songListIds)){
-            this.randomSongListIds = new ArrayList<>(Arrays.asList(new Long[songListIds.size()]));
-            Collections.copy(randomSongListIds,songListIds);
-            Collections.shuffle(randomSongListIds);
+        if(ObjectHelper.requireNonNull(playSongs)){
+            this.randomPlaySongs = new ArrayList<>(Arrays.asList(new PlaySong[playSongs.size()]));
+            Collections.copy(randomPlaySongs, playSongs);
+            Collections.shuffle(randomPlaySongs);
         }
     }
 
@@ -397,8 +434,15 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     /**
      * 获取播放列表id合集
      */
-    public List<Long> getSongListIds() {
-        return songListIds;
+    public List<PlaySong> getPlaySongs() {
+        return playSongs;
+    }
+
+    /**
+     * 获取随机播放列表id合集
+     */
+    public List<PlaySong> getRandomPlaySongs() {
+        return randomPlaySongs;
     }
 
     /**
@@ -409,14 +453,14 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
         if(mPlayer != null){
             stopRecord();
             compositeDisposable.add(
-                    recordTask = Observable.interval(0,10,TimeUnit.SECONDS)
+                    recordTask = Observable.interval(0,RECORD_INTERVAL,TimeUnit.SECONDS)
                             .subscribeOn(Schedulers.computation())
                             .subscribe(new Consumer<Long>() {
                                 @Override
                                 public void accept(Long aLong){
                                     if (mPlayer.isPlaying()){
-                                        currentAudio.setRecord(mPlayer.getCurrentPosition());
-                                        currentAudio.update(currentAudio.getId());
+                                        currentPlayControl.setRecord(mPlayer.getCurrentPosition());
+                                        currentPlayControl.update(currentPlayControl.getId());
                                     }
                                 }
                             })

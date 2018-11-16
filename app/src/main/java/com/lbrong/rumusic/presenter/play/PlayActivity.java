@@ -26,6 +26,8 @@ import android.widget.SeekBar;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.adapter.BasicPlayListAdapter;
+import com.lbrong.rumusic.common.db.DBHelper;
+import com.lbrong.rumusic.common.db.table.PlaySong;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.EventStringKey;
 import com.lbrong.rumusic.common.type.PlayMethodEnum;
@@ -40,7 +42,6 @@ import com.lbrong.rumusic.presenter.base.ActivityPresenter;
 import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.play.PlayDelegate;
 import com.lbrong.rumusic.view.widget.ListSwipeHelperCallback;
-import org.litepal.LitePal;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -186,6 +187,7 @@ public class PlayActivity
                     @Override
                     public void onChanged(@Nullable String s) {
                         if (!TextUtils.isEmpty(s)) {
+                            assert s != null;
                             switch (s) {
                                 case EventStringKey.Music.MUSIC_PLAY:
                                     // 歌曲播放
@@ -295,10 +297,14 @@ public class PlayActivity
     @Override
     public boolean onMenuItemClick(MenuItem item) {
         if (playListMenuIndex != -1 && playService != null){
+            // 通过播放方式拿到播放列表
+            List<PlaySong> playSongs = playService.getPlaySongs();
+            if(SettingHelper.build().getPlayMethod() == PlayMethodEnum.RANDOM){
+                playSongs = playService.getRandomPlaySongs();
+            }
             // 拿到正在播放的歌曲
-            List<Long> ids = playService.getSongListIds();
-            long id = ids.get(playListMenuIndex);
-            Song song = LitePal.find(Song.class,id);
+            PlaySong playSong = playSongs.get(playListMenuIndex);
+            Song song = DBHelper.build().querySongBySongId(playSong.getSongId());
             // 分析动作
             switch (item.getItemId()){
                 // 马上播放
@@ -310,14 +316,26 @@ public class PlayActivity
                     break;
                 // 下一首播放
                 case R.id.action_next:
+                    if(SettingHelper.build().getPlayMethod() == PlayMethodEnum.RANDOM){
+                        viewDelegate.toast("我是随机的，无法预知下一首歌曲哦！");
+                        break;
+                    }
+                    // 原来位置的index
+                    int oldIndex = playSongs.indexOf(playSong);
                     // 删除原来
-                    ids.remove(id);
+                    playSongs.remove(playSong);
                     // 当前播放歌曲的id
-                    long nowId = playService.getCurrentAudio().getId();
+                    long nowId = playService.getCurrentAudio().getSongId();
                     // 位置
-                    int nowIndex = ids.indexOf(nowId);
+                    int nowIndex = 0;
+                    for (int i = 0; i < playSongs.size(); i++) {
+                        if(playSongs.get(i).getSongId() == nowId){
+                            nowIndex = i;
+                            break;
+                        }
+                    }
                     // 添加
-                    ids.add(nowIndex + 1,id);
+                    playSongs.add(nowIndex + 1,playSong);
                     // 更新播放列表状态
                     if(playListAdapter != null){
                         List<Song> list = playListAdapter.getData();
@@ -326,21 +344,23 @@ public class PlayActivity
                         // 添加
                         list.add(nowIndex + 1,song);
                         // 刷新
-                        playListAdapter.notifyDataSetChanged();
-            }
+                        int start = oldIndex > nowIndex ? nowIndex : oldIndex;
+                        playListAdapter.notifyItemMoved(oldIndex,nowIndex);
+                        playListAdapter.notifyItemRangeChanged(start,Math.abs(oldIndex - nowIndex) + 2);
+                    }
                     break;
                 // 重复播放
                 case R.id.action_repeat:
-                    int repeat = song.getRepeat();
-                    song.setRepeat(++repeat);
-                    song.save();
-                    playListAdapter.notifyDataSetChanged();
+                    int repeat = playSong.getRepeat();
+                    playSong.setRepeat(++repeat);
+                    playSong.update(playSong.getId());
+                    playListAdapter.notifyItemChanged(playSongs.indexOf(playSong));
                     break;
                 // 取消歌曲重复
                 case R.id.action_cancel_repeat:
-                    song.setRepeat(0);
-                    song.save();
-                    playListAdapter.notifyDataSetChanged();
+                    playSong.setRepeat(0);
+                    playSong.update(playSong.getId());
+                    playListAdapter.notifyItemChanged(playSongs.indexOf(playSong));
                     break;
             }
             // 重置索引
@@ -515,12 +535,12 @@ public class PlayActivity
                     @Override
                     public List<Song> call(){
                         // 获取播放列表ids
-                        List<Long> ids = playService.getSongListIds();
+                        List<PlaySong> ids = playService.getPlaySongs();
                         // 数据库取出对应数据
                         List<Song> songs = new ArrayList<>(ids.size());
                         // 获取对应的歌曲集合,findAll方法顺序不根据id排序，所以只能遍历
                         for (int i = 0; i < ids.size(); i++) {
-                            songs.add(LitePal.find(Song.class,ids.get(i)));
+                            songs.add(DBHelper.build().querySongBySongId(ids.get(i).getSongId()));
                         }
                         return songs;
                     }
@@ -596,14 +616,14 @@ public class PlayActivity
                                                 .subscribe(new Consumer<Long>() {
                                                     @Override
                                                     public void accept(Long aLong){
-                                                        playService.getSongListIds().remove(pos);
+                                                        playService.getPlaySongs().remove(pos);
                                                     }
                                                 })
                                 );
                                 return;
                             }
                             // 更新服务播放列表
-                            playService.getSongListIds().remove(pos);
+                            playService.getPlaySongs().remove(pos);
                         }
                     }
                 }
@@ -618,7 +638,7 @@ public class PlayActivity
                         playListAdapter.notifyItemRangeChanged(start,Math.abs(fromPosition - toPosition) + 1);
                         // 更新服务播放列表
                         if(playService != null){
-                            List<Long> ids = playService.getSongListIds();
+                            List<PlaySong> ids = playService.getPlaySongs();
                             Collections.swap(ids, fromPosition, toPosition);
                         }
                     }
