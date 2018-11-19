@@ -3,8 +3,6 @@ package com.lbrong.rumusic.common.utils;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -12,7 +10,6 @@ import android.support.annotation.Nullable;
 import com.lbrong.rumusic.common.db.table.Song;
 import java.io.File;
 import java.io.FileInputStream;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 /**
@@ -74,15 +71,11 @@ public final class MusicHelper {
                         m.setAlbum(album);
                         m.setAlbumId(albumId);
                         m.setBitrate(getBitrate(size * 8,duration));
-                        Bitmap bitmap = getAlbumArt(url, 8);
-                        if(ObjectHelper.requireNonNull(bitmap)){
-                            m.setBitmap(new WeakReference<>(bitmap));
-                        }
+                        m.setCover(getAlbumArt(url));
                         songList.add(m);
                     }
                     cursor.moveToNext();
                 }
-
                 cursor.close();
                 return songList;
             }
@@ -93,19 +86,13 @@ public final class MusicHelper {
     /**
      * 获取专辑封面
      * @param url mp3地址
-     * @param ratio 压缩比例
      */
-    public @Nullable Bitmap getAlbumArt(String url, int ratio) {
+    public @Nullable byte[] getAlbumArt(String url) {
         try {
             FileInputStream inputStream = new FileInputStream(new File(url).getAbsolutePath());
             MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
             mediaMetadataRetriever.setDataSource(inputStream.getFD());
-            byte[] picture = mediaMetadataRetriever.getEmbeddedPicture();
-            Bitmap bitmap= BitmapFactory.decodeByteArray(picture,0,picture.length);
-            if (ratio != 0) {
-                bitmap = ImageUtils.compressBitmap(bitmap, ratio);
-            }
-            return bitmap;
+            return mediaMetadataRetriever.getEmbeddedPicture();
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -30,8 +30,6 @@ public class Song extends LitePalSupport {
     private int music;
     private int bitrate;
     private byte[] cover;
-    @Column(ignore = true)
-    private WeakReference<Bitmap> bitmap;
 
     @Override
     public boolean equals(Object o) {
@@ -79,14 +77,6 @@ public class Song extends LitePalSupport {
 
     public void setBitrate(int bitrate) {
         this.bitrate = bitrate;
-    }
-
-    public WeakReference<Bitmap> getBitmap() {
-        return bitmap == null ? new WeakReference<Bitmap>(null) : bitmap;
-    }
-
-    public void setBitmap(WeakReference<Bitmap> bitmap) {
-        this.bitmap = bitmap;
     }
 
     public long getId() {
