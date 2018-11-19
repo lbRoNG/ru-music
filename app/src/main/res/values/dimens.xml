@@ -17,14 +17,5 @@
     <dimen name="sp18">18sp</dimen>
 
     <dimen name="nav_header_height">176dp</dimen>
-    <dimen name="play_controller_height">55dp</dimen>
-    <dimen name="song_cover_width_height">45dp</dimen>
-    <dimen name="song_item_height">75dp</dimen>
-    <dimen name="song_item_playing_height">100dp</dimen>
 
-    <dimen name="play_detail_cover_width_height">170dp</dimen>
-    <dimen name="play_detail_cover_bg_margin">115dp</dimen>
-
-    <dimen name="play_list_song_cover_width_height">35dp</dimen>
-    <dimen name="play_list_song_item_height">65dp</dimen>
 </resources>

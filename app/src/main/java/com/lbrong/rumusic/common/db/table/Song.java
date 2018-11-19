@@ -16,18 +16,20 @@ public class Song extends LitePalSupport {
     private long id;
     private long songId;
     private long albumId;
+    private long artistId;
     @Column(defaultValue = "未知")
     private String album;
     @Column(defaultValue = "未知")
     private String title;
     @Column(defaultValue = "群星")
     private String artist;
-    private long artistId;
     private String url;
+    private String coverUrl;
     private long size;
     private long duration;
     private int music;
     private int bitrate;
+    private byte[] cover;
     @Column(ignore = true)
     private WeakReference<Bitmap> bitmap;
 
@@ -45,6 +47,22 @@ public class Song extends LitePalSupport {
     @Override
     public int hashCode() {
         return Objects.hash(getId(),getSongId(), getAlbumId(), getSize(), getDuration());
+    }
+
+    public String getCoverUrl() {
+        return coverUrl;
+    }
+
+    public void setCoverUrl(String coverUrl) {
+        this.coverUrl = coverUrl;
+    }
+
+    public byte[] getCover() {
+        return cover;
+    }
+
+    public void setCover(byte[] cover) {
+        this.cover = cover;
     }
 
     public long getSongId() {

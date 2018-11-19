@@ -3,9 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_search"
-        android:orderInCategory="100"
         android:icon="@drawable/ic_menu_search"
+        android:orderInCategory="100"
         android:title="@string/action_search"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_list"
+        android:icon="@drawable/ic_menu_list"
+        android:orderInCategory="90"
+        android:title="@string/action_song_list"
         app:showAsAction="ifRoom" />
 
 </menu>

@@ -15,7 +15,7 @@ import android.widget.LinearLayout;
 /**
  * @author lbRoNG
  */
-public class StatusBarUtils {
+public final class StatusBarUtils {
 
     /**
      * 全屏模式

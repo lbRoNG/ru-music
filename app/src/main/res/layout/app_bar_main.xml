@@ -21,26 +21,13 @@
             app:layout_scrollFlags="scroll|enterAlways"
             app:popupTheme="@style/AppTheme.PopupOverlay" />
 
-        <android.support.design.widget.TabLayout
-            android:id="@+id/tabs"
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/rv_song_list"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:tabGravity="fill"
-            app:tabIndicatorColor="@color/colorAccent"
-            app:tabIndicatorFullWidth="false"
-            app:tabMode="fixed"
-            app:tabSelectedTextColor="@color/colorAccent"
-            app:tabTextColor="@color/textPrimary" />
-
+            android:layout_height="150dp"
+            app:layout_scrollFlags="scroll|enterAlways" />
     </android.support.design.widget.AppBarLayout>
 
     <include layout="@layout/content_main" />
-
-    <com.lbrong.rumusic.view.widget.PlayControllerView
-        android:id="@+id/play_controller"
-        android:layout_width="match_parent"
-        android:layout_gravity="bottom"
-        android:visibility="gone"
-        android:layout_height="@dimen/play_controller_height"/>
 
 </android.support.design.widget.CoordinatorLayout>

@@ -32,10 +32,7 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <service
-            android:name=".service.PlayService"
-            android:exported="false" />
-
+        <!--首页-->
         <activity
             android:name=".presenter.home.MainActivity"
             android:screenOrientation="portrait">
@@ -44,11 +41,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
-        <activity
-            android:name=".presenter.play.PlayActivity"
-            android:screenOrientation="portrait" />
     </application>
 
 </manifest>

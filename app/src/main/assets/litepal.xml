@@ -3,7 +3,13 @@
     <dbname value="ru_music" />
     <version value="1" />
     <list>
+        <!--所有歌曲-->
         <mapping class="com.lbrong.rumusic.common.db.table.Song" />
-        <mapping class="com.lbrong.rumusic.common.db.table.PlaySong" />
+        <!--播放列表-->
+        <mapping class="com.lbrong.rumusic.common.db.table.PlayList" />
+        <!--播放列表歌曲记录-->
+        <mapping class="com.lbrong.rumusic.common.db.table.PlayRecord" />
+        <!--歌单-->
+        <mapping class="com.lbrong.rumusic.common.db.table.SongList" />
     </list>
 </litepal>

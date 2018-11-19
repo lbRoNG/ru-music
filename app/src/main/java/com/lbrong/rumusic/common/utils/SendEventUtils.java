@@ -1,29 +1,39 @@
 package com.lbrong.rumusic.common.utils;
 
-import com.jeremyliao.livedatabus.LiveDataBus;
-
-import java.util.concurrent.Callable;
-
-import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
+import org.greenrobot.eventbus.EventBus;
 
 /**
  * @author lbRoNG
  * @since 2018/10/23
  */
 public final class SendEventUtils {
-    private SendEventUtils(){}
+    private SendEventUtils() {}
 
-    public static <T> void sendForMain(final String key,final T value){
-        LiveDataBus.get().with(key).setValue(value);
+    public static void register(Object o) {
+        if (!EventBus.getDefault().isRegistered(o)) {
+            EventBus.getDefault().register(o);
+        }
     }
 
-    public static <T> void sendForBack(String key,T value){
-        LiveDataBus.get().with(key).postValue(value);
+    public static void unregister(Object o) {
+        if (EventBus.getDefault().isRegistered(o)) {
+            EventBus.getDefault().unregister(o);
+        }
     }
 
-    public static <T> LiveDataBus.Observable<T> observe(String key, Class<T> type){
-        return (LiveDataBus.Observable<T>) LiveDataBus.get().with(key, type.getClass());
+    public static void post(Object o) {
+        EventBus.getDefault().post(o);
     }
 
+    public static void postSticky(Object o) {
+        EventBus.getDefault().postSticky(o);
+    }
+
+    public static void removeStickyEvent(Object o) {
+        EventBus.getDefault().removeStickyEvent(o);
+    }
+
+    public static void removeStickyEvent(Class clazz) {
+        EventBus.getDefault().removeStickyEvent(clazz);
+    }
 }

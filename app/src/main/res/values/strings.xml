@@ -8,7 +8,7 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title">Ru-Music</string>
-    <string name="nav_header_subtitle">无损下载,听你想听</string>
+    <string name="nav_header_subtitle">无损下载，听你想听</string>
     <string name="nav_item_share">分享</string>
     <string name="nav_item_about">关于</string>
     <string name="nav_item_other">其他</string>
@@ -19,6 +19,7 @@
     <string name="nav_item_cache">缓存管理</string>
 
     <string name="action_search">搜索</string>
+    <string name="action_song_list">歌单</string>
     <string name="action_play">播放</string>
     <string name="action_next_play">下一首播放</string>
     <string name="action_repeat_play">重复一次</string>

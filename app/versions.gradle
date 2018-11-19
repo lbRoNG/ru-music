@@ -12,10 +12,14 @@ versions.rxpermissions = "0.10.2"
 versions.litepal = "3.0.0"
 versions.progressmanager = "1.5.0"
 versions.bugly = "latest.release"
-versions.live_event_bus = "0.0.1"
 versions.rxLifecycle2 = "2.2.2"
 versions.mmkv = "1.0.12"
+versions.eventbus = "3.1.1"
 def deps = [:]
+
+def eventbus = [:]
+eventbus.core = "org.greenrobot:eventbus:$versions.eventbus"
+deps.eventbus = eventbus
 
 def mmkv = [:]
 mmkv.core = "com.tencent:mmkv:$versions.mmkv"
@@ -26,10 +30,6 @@ rxLifecycle2.core = "com.trello.rxlifecycle2:rxlifecycle:$versions.rxLifecycle2"
 rxLifecycle2.android = "com.trello.rxlifecycle2:rxlifecycle-android:$versions.rxLifecycle2"
 rxLifecycle2.components = "com.trello.rxlifecycle2:rxlifecycle-components:$versions.rxLifecycle2"
 deps.rxLifecycle2 = rxLifecycle2
-
-def live_event_bus = [:]
-live_event_bus.core = "com.jeremyliao:live-event-bus:$versions.live_event_bus"
-deps.live_event_bus = live_event_bus
 
 def bugly = [:]
 bugly.sdk = "com.tencent.bugly:crashreport:$versions.bugly"
