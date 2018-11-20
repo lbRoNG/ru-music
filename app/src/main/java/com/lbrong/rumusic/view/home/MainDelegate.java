@@ -5,6 +5,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 
@@ -85,8 +86,24 @@ public class MainDelegate extends AppDelegate {
     /**
      * 设置歌曲列表
      */
-    private void setSongListAdapter(BaseQuickAdapter adapter){
+    public void setSongListAdapter(BaseQuickAdapter adapter){
         RecyclerView view = get(R.id.rv_list);
         view.setAdapter(adapter);
+    }
+
+    /**
+     * 设置滚动监听
+     */
+    public void setOnListScrollListener(RecyclerView.OnScrollListener listener){
+        RecyclerView view = get(R.id.rv_list);
+        view.addOnScrollListener(listener);
+    }
+
+    /**
+     * 获取布局管理器
+     */
+    public LinearLayoutManager getLayoutManager(){
+        RecyclerView view = get(R.id.rv_list);
+        return (LinearLayoutManager) view.getLayoutManager();
     }
 }

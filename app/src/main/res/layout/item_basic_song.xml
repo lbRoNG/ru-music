@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/basic_song_h">
+
+    <ImageView
+        android:id="@+id/iv_cover"
+        android:layout_width="@dimen/basic_song_cover_w_h"
+        android:layout_height="@dimen/basic_song_cover_w_h"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="@dimen/dp16"
+        android:layout_marginEnd="@dimen/dp16"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_song_default_cover" />
+
+    <RelativeLayout
+        android:id="@+id/rl_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_marginEnd="@dimen/dp4"
+        android:layout_toStartOf="@id/tv_duration"
+        android:layout_toEndOf="@id/iv_cover"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_song_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:textColor="@color/textPrimary"
+            tools:text="Love Song" />
+
+        <ImageView
+            android:id="@+id/iv_tone"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_below="@id/tv_song_name"
+            android:contentDescription="@null"
+            tools:src="@drawable/ic_song_sq" />
+
+        <TextView
+            android:id="@+id/tv_artist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tv_song_name"
+            android:layout_marginStart="@dimen/dp4"
+            android:layout_marginTop="@dimen/dp2"
+            android:layout_toEndOf="@id/iv_tone"
+            android:singleLine="true"
+
+            android:textColor="@color/textThirdly"
+            android:textSize="@dimen/sp12"
+            tools:text="Artist" />
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/tv_duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@id/rl_info"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="@dimen/dp16"
+        android:gravity="end"
+        android:singleLine="true"
+        android:textColor="@color/textThirdly"
+        android:textSize="@dimen/sp12"
+        tools:text="1:00 / 5:00" />
+
+</RelativeLayout>

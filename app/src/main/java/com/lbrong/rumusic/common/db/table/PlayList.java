@@ -1,5 +1,6 @@
 package com.lbrong.rumusic.common.db.table;
 
+import org.litepal.LitePal;
 import org.litepal.annotation.Column;
 import org.litepal.crud.LitePalSupport;
 import java.util.List;
@@ -15,10 +16,10 @@ public class PlayList extends LitePalSupport {
     @Column(defaultValue = "播放列表")
     private String name;
     private int count;   // 总数
-    private int playing; // 正在播放的音乐位置
+    private long playingId; // 正在播放的音乐
     private long record; // 历史播放进度
-    private List<Song> songs;
-    private List<PlayRecord> playRecords;
+    private List<Song> songs; // 音乐列表
+    private List<PlayRecord> playRecords; // 列表内音乐播放的控制
 
     public long getId() {
         return id;
@@ -44,12 +45,12 @@ public class PlayList extends LitePalSupport {
         this.count = count;
     }
 
-    public int getPlaying() {
-        return playing;
+    public long getPlayingId() {
+        return playingId;
     }
 
-    public void setPlaying(int playing) {
-        this.playing = playing;
+    public void setPlayingId(long playingId) {
+        this.playingId = playingId;
     }
 
     public long getRecord() {
@@ -61,7 +62,7 @@ public class PlayList extends LitePalSupport {
     }
 
     public List<Song> getSongs() {
-        return songs;
+        return songs = LitePal.where("playlist_id=" + this.id).find(Song.class);
     }
 
     public void setSongs(List<Song> songs) {

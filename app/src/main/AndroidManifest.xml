@@ -32,6 +32,11 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!--播放服务-->
+        <service
+            android:name=".service.PlayService"
+            android:exported="false" />
+
         <!--首页-->
         <activity
             android:name=".presenter.home.MainActivity"

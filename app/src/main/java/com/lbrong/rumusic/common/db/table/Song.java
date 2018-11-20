@@ -1,9 +1,7 @@
 package com.lbrong.rumusic.common.db.table;
 
-import android.graphics.Bitmap;
 import org.litepal.annotation.Column;
 import org.litepal.crud.LitePalSupport;
-import java.lang.ref.WeakReference;
 import java.util.Objects;
 
 /**
@@ -43,8 +41,19 @@ public class Song extends LitePalSupport {
     }
 
     @Override
+    public String toString() {
+        return "Song{" +
+                "songId=" + songId +
+                ", albumId=" + albumId +
+                ", artistId=" + artistId +
+                ", title='" + title + '\'' +
+                ", artist='" + artist + '\'' +
+                '}';
+    }
+
+    @Override
     public int hashCode() {
-        return Objects.hash(getId(),getSongId(), getAlbumId(), getSize(), getDuration());
+        return Objects.hash(getId(), getSongId(), getAlbumId(), getSize(), getDuration());
     }
 
     public String getCoverUrl() {

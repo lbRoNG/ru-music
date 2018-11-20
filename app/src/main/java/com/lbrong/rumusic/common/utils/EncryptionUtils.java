@@ -1,8 +1,15 @@
 package com.lbrong.rumusic.common.utils;
 
+import android.support.annotation.NonNull;
 import android.util.Base64;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * @author lbRoNG
@@ -10,8 +17,7 @@ import java.security.MessageDigest;
  */
 public final class EncryptionUtils {
 
-    private EncryptionUtils() {
-    }
+    private EncryptionUtils() {}
 
     private static String getBase64(byte[] bytes) {
         String result = "";
@@ -25,23 +31,30 @@ public final class EncryptionUtils {
         return result;
     }
 
-    public static String md5(byte[] buffer) {
-        char hexDigits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    public static String md5(String info) {
         try {
-            MessageDigest mdTemp = MessageDigest.getInstance("MD5");
-            mdTemp.update(buffer);
-            byte[] md = mdTemp.digest();
-            int j = md.length;
-            char str[] = new char[j * 2];
-            int k = 0;
-            for (byte byte0 : md) {
-                str[k++] = hexDigits[byte0 >>> 4 & 0xf];
-                str[k++] = hexDigits[byte0 & 0xf];
-            }
-            return new String(str);
-        } catch (Exception e) {
-            return null;
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+            md5.update(info.getBytes("UTF-8"));
+            byte[] md5Array = md5.digest();
+            return bytesToHex1(md5Array);
+        } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
+            return "";
         }
+    }
+
+    @NonNull
+    private static String bytesToHex1(byte[] md5Array) {
+        StringBuilder strBuilder = new StringBuilder();
+        for (byte aMd5Array : md5Array) {
+            int temp = 0xff & aMd5Array;
+            String hexString = Integer.toHexString(temp);
+            if (hexString.length() == 1) {
+                strBuilder.append("0").append(hexString);
+            } else {
+                strBuilder.append(hexString);
+            }
+        }
+        return strBuilder.toString();
     }
 }
 
