@@ -15,10 +15,10 @@
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/rv_list"
-            app:layoutManager="android.support.v7.widget.LinearLayoutManager"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:paddingBottom="@dimen/play_controller_h"
+            app:layoutManager="android.support.v7.widget.LinearLayoutManager" />
 
     </com.lbrong.rumusic.view.widget.ErrorView>
-
 </RelativeLayout>

@@ -52,7 +52,6 @@
             android:layout_marginTop="@dimen/dp2"
             android:layout_toEndOf="@id/iv_tone"
             android:singleLine="true"
-
             android:textColor="@color/textThirdly"
             android:textSize="@dimen/sp12"
             tools:text="Artist" />

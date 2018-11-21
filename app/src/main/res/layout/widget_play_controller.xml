@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/play_controller_h"
+    android:animateLayoutChanges="true"
+    android:background="@color/colorAccent"
+    android:clickable="true"
+    android:focusable="true">
+
+    <ProgressBar
+        android:id="@+id/pb_duration"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="5dp"
+        android:progressDrawable="@drawable/list_controller_pb_bg" />
+
+    <ImageView
+        android:id="@+id/iv_cover"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_below="@id/pb_duration"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="@dimen/dp16"
+        android:layout_marginTop="@dimen/dp2"
+        android:layout_marginEnd="@dimen/dp16"
+        android:layout_marginBottom="@dimen/dp4"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_song_circle_default_cover" />
+
+    <RelativeLayout
+        android:id="@+id/rl_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_marginEnd="@dimen/dp4"
+        android:layout_toStartOf="@id/iv_list"
+        android:layout_toEndOf="@id/iv_cover"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_song_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:singleLine="true"
+            android:textColor="@color/colorWhite"
+            tools:text="Love Song" />
+
+        <TextView
+            android:id="@+id/tv_artist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tv_song_name"
+            android:layout_marginTop="@dimen/dp2"
+            android:singleLine="true"
+            android:textColor="@color/colorWhite"
+            android:textSize="@dimen/sp12"
+            tools:text="Artist" />
+    </RelativeLayout>
+
+    <ImageView
+        android:id="@+id/iv_next"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:layout_marginEnd="@dimen/dp8"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@null"
+        android:padding="@dimen/dp8"
+        android:src="@drawable/ic_controller_next" />
+
+    <ImageView
+        android:id="@+id/iv_play"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_centerVertical="true"
+        android:layout_toStartOf="@id/iv_next"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@null"
+        android:padding="@dimen/dp8"
+        android:src="@drawable/ic_controller_pause"
+        android:tag="pause" />
+
+    <ImageView
+        android:id="@+id/iv_list"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_centerVertical="true"
+        android:layout_toStartOf="@id/iv_play"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@null"
+        android:padding="6dp"
+        android:src="@drawable/ic_controller_list"
+        android:tag="pause" />
+
+</RelativeLayout>

@@ -29,6 +29,7 @@ import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import com.lbrong.rumusic.common.utils.PermissionPageUtils;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
+import com.lbrong.rumusic.iface.listener.OnPlayControllerClickListener;
 import com.lbrong.rumusic.presenter.base.ActivityPresenter;
 import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.home.MainDelegate;
@@ -40,7 +41,10 @@ import org.litepal.crud.callback.FindCallback;
 import org.litepal.crud.callback.UpdateOrDeleteCallback;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import io.reactivex.Flowable;
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
@@ -52,7 +56,8 @@ import io.reactivex.schedulers.Schedulers;
  */
 public class MainActivity
        extends ActivityPresenter<MainDelegate>
-       implements NavigationView.OnNavigationItemSelectedListener,BaseQuickAdapter.OnItemClickListener {
+       implements NavigationView.OnNavigationItemSelectedListener
+        ,BaseQuickAdapter.OnItemClickListener,OnPlayControllerClickListener {
 
     // 适配器
     private BasicSongListAdapter songListAdapter;
@@ -73,6 +78,7 @@ public class MainActivity
         super.bindEvenListener();
         viewDelegate.setNavigationItemSelectedListener(this);
         viewDelegate.setOnListScrollListener(new OnListScrollListener());
+        viewDelegate.setControllerCallback(this);
     }
 
     @Override
@@ -123,6 +129,28 @@ public class MainActivity
         bindPlayService();
     }
 
+    @Override
+    protected void onStart() {
+        if(playService != null && playService.isPlaying()){
+            viewDelegate.resumeController(playService.getCurrentPosition());
+            if(songListAdapter != null){
+                songListAdapter.startTimer(playService.getCurrentPosition());
+            }
+        }
+        super.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        if(playService != null && playService.isPlaying()){
+            viewDelegate.pauseController();
+            if(songListAdapter != null){
+                songListAdapter.stopTimer();
+            }
+        }
+        super.onStop();
+    }
+
     /**
      * 歌曲item点击
      */
@@ -157,8 +185,57 @@ public class MainActivity
                 if(songListAdapter != null && playService != null){
                     songListAdapter.setPlaying(playService.getCurrentAudio(),true);
                 }
+                // 设置并显示控制器
+                showController();
+                viewDelegate.setPlayBtn(true);
+                break;
+            case MUSIC_COMPLETE:
+                // 播放完成停止控制器动画
+                viewDelegate.pauseController();
+                viewDelegate.setPlayBtn(false);
+                break;
+            case MUSIC_ALL_COMPLETE:
+                // 播放完成停止控制器动画
+                viewDelegate.pauseController();
+                viewDelegate.setPlayBtn(false);
                 break;
         }
+    }
+
+    /**
+     * 控制器播放状态
+     */
+    @Override
+    public void onAudioPlay() {
+        if(playService != null){
+            playService.continuePlay();
+            viewDelegate.resumeController(playService.getCurrentPosition());
+            if(songListAdapter != null){
+                songListAdapter.startTimer(playService.getCurrentPosition());
+            }
+        }
+    }
+
+    /**
+     * 控制器暂停状态
+     */
+    @Override
+    public void onAudioPause() {
+        if(playService != null){
+            playService.pause();
+            viewDelegate.pauseController();
+            if(songListAdapter != null){
+                songListAdapter.stopTimer();
+            }
+        }
+    }
+
+    /**
+     * 控制器下一曲
+     */
+    @Override
+    public void onAudioNext() {
+        viewDelegate.hideController();
     }
 
     /**
@@ -297,25 +374,35 @@ public class MainActivity
     /**
      * 开始播放
      */
-    private void startPlay(Song item) {
+    private void startPlay(final Song item) {
         // 当前歌曲集合
-        List<Song> songs = songListAdapter.getData();
-        // 通知服务播放
-        playService.setAudio(item);
-        playService.playAudio();
+        final List<Song> songs = songListAdapter.getData();
         // 播放列表更新
         // 比对保存的播放列表和当前要设置的播放列表是否相同
-        if(!ObjectHelper.requireNonNull(playService.getPlayList())){
-            // 播放列表中为空，直接设置
-            playService.setPlayList(songs);
-            // 保存进数据库
-            savePlayList(item.getSongId(),songs);
-        } else{
-            String serviceMD5 = EncryptionUtils.md5(playService.getPlayList().toString());
-            String nowMD5 = EncryptionUtils.md5(songs.toString());
-            if(!TextUtils.equals(serviceMD5,nowMD5)){
-                savePlayList(item.getSongId(),songs);
-            }
+        PlayList playList = playService.getPlayList();
+        String serviceMD5 = playList == null ? "" : EncryptionUtils.md5(playList.getSongs().toString());
+        String nowMD5 = EncryptionUtils.md5(songs.toString());
+        if(!TextUtils.equals(serviceMD5,nowMD5)){
+            LitePal.deleteAllAsync(PlayList.class)
+                    .listen(new UpdateOrDeleteCallback() {
+                        @Override
+                        public void onFinish(int rowsAffected) {
+                            // 创建播放列表
+                            PlayList playList = new PlayList();
+                            playList.setCount(songs.size());
+                            playList.setSongs(songs);
+                            // 设置给服务并播放
+                            playService.setPlayList(playList);
+                            playService.setAudio(item);
+                            playService.playAudio();
+                            // 保存
+                            playList.saveAsync();
+                        }
+                    });
+        } else {
+            // 通知服务播放
+            playService.setAudio(item);
+            playService.playAudio();
         }
     }
 
@@ -324,23 +411,6 @@ public class MainActivity
      */
     private void replay() {
         playService.rePlay();
-    }
-
-    /**
-     * 保存播放列表
-     */
-    private void savePlayList(final long plyingId,final List<Song> songs){
-        LitePal.deleteAllAsync(PlayList.class)
-                .listen(new UpdateOrDeleteCallback() {
-                    @Override
-                    public void onFinish(int rowsAffected) {
-                        PlayList playList = new PlayList();
-                        playList.setCount(songs.size());
-                        playList.setPlayingId(plyingId);
-                        playList.setSongs(songs);
-                        playList.save();
-                    }
-                });
     }
 
     /**
@@ -354,10 +424,74 @@ public class MainActivity
                 // 不为空证明设置过播放列表
                 if(ObjectHelper.requireNonNull(playList)){
                     // 播放列表给到服务保存
-                    playService.setPlayList(playList.getSongs());
+                    playService.setPlayList(playList);
+                    // 恢复播放记录
+                    recoverPlayRecord(playList);
                 }
             }
         });
+    }
+
+    /**
+     * 设置控制器
+     */
+    private void showController(){
+        if(playService != null){
+            Song plying = playService.getCurrentAudio();
+            if(plying != null){
+                viewDelegate.setController(plying.getCover(),plying.getTitle()
+                        ,plying.getArtist(),plying.getDuration(),playService.getCurrentPosition(),true);
+                viewDelegate.showController();
+            }
+        }
+    }
+
+    /**
+     * 恢复播放记录
+     * @param playList 当前播放列表
+     */
+    private void recoverPlayRecord(final PlayList playList){
+        long currentId = playList.getPlayingId();
+        final Song plying = LitePal.where("songid=" + String.valueOf(currentId)).findFirst(Song.class);
+        if(plying != null){
+            // 恢复服务
+            playService.setPlayList(playList);
+            playService.rePrepare(plying,(int)playList.getRecord());
+            // 确保适配器初始化完成
+            addDisposable(
+                    Observable.fromCallable(new Callable<Boolean>() {
+                        @Override
+                        public Boolean call() {
+                            while (true){
+                                if(songListAdapter != null){
+                                    break;
+                                }
+                            }
+                            return true;
+                        }
+                    }).subscribeOn(Schedulers.computation())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .flatMap(new Function<Boolean, ObservableSource<Long>>() {
+                                @Override
+                                public ObservableSource<Long> apply(Boolean aBoolean)  {
+                                    songListAdapter.setPlaying(plying,false);
+                                    return Observable.timer(500,TimeUnit.MICROSECONDS,Schedulers.computation());
+                                }
+                    }).observeOn(AndroidSchedulers.mainThread())
+                            .subscribe(new Consumer<Long>() {
+                                @Override
+                                public void accept(Long aLong) {
+                                    songListAdapter.setItemDuration(playList.getRecord());
+                                }
+                            })
+            );
+            // 恢复控制器
+            viewDelegate.setController(plying.getCover(),plying.getTitle()
+                    ,plying.getArtist(),plying.getDuration(),playService.getCurrentPosition(),false);
+            viewDelegate.showController();
+            viewDelegate.setPlayBtn(false);
+            viewDelegate.setProgress(playList.getRecord());
+        }
     }
 
     /**
@@ -378,7 +512,7 @@ public class MainActivity
                         if(!playService.isPlaying()){
                             songListAdapter.setItemDuration(now);
                         } else {
-                            songListAdapter.startTimer(now,playService.getDuration());
+                            songListAdapter.startTimer(now);
                         }
                     }
                 } else {

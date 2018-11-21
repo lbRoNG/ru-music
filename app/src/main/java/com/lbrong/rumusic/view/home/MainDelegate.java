@@ -12,8 +12,10 @@ import android.support.v7.widget.Toolbar;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
+import com.lbrong.rumusic.iface.listener.OnPlayControllerClickListener;
 import com.lbrong.rumusic.iface.view.IErrorView;
 import com.lbrong.rumusic.view.base.AppDelegate;
+import com.lbrong.rumusic.view.widget.PlayController;
 
 /**
  * @author lbRoNG
@@ -105,5 +107,75 @@ public class MainDelegate extends AppDelegate {
     public LinearLayoutManager getLayoutManager(){
         RecyclerView view = get(R.id.rv_list);
         return (LinearLayoutManager) view.getLayoutManager();
+    }
+
+    /**
+     * 设置控制器
+     */
+    public void setController(byte[] cover,String name,String artist,long duration,long current,boolean auto){
+        PlayController controller = get(R.id.play_controller);
+        controller.setSongInfo(cover,name,artist,duration,current,auto);
+    }
+
+    /**
+     * 显示控制器
+     */
+    public void showController(){
+        PlayController controller = get(R.id.play_controller);
+        float old = getActivity().getResources().getDimension(R.dimen.play_controller_h);
+        if(old == controller.getTranslationY()){
+            controller.animate().translationY(1).setDuration(300).start();
+        }
+    }
+
+    /**f
+     * 显示控制器
+     */
+    public void hideController(){
+        PlayController controller = get(R.id.play_controller);
+        if(1 == (int) controller.getTranslationY()){
+            float old = getActivity().getResources().getDimension(R.dimen.play_controller_h);
+            controller.animate().translationY(old).setDuration(300).start();
+        }
+    }
+
+    /**
+     * 设置监听
+     */
+    public void setControllerCallback(OnPlayControllerClickListener listener){
+        PlayController controller = get(R.id.play_controller);
+        controller.setCallback(listener);
+    }
+
+    /**
+     * 暂停控制器
+     */
+    public void pauseController(){
+        PlayController controller = get(R.id.play_controller);
+        controller.pauseController();
+    }
+
+    /**
+     * 继续控制器
+     */
+    public void resumeController(long current){
+        PlayController controller = get(R.id.play_controller);
+        controller.resumeController(current);
+    }
+
+    /**
+     * 设置播放或暂停按钮
+     */
+    public void setPlayBtn(boolean playing){
+        PlayController controller = get(R.id.play_controller);
+        controller.setPlayBtn(playing);
+    }
+
+    /**
+     * 设置进度
+     */
+    public void setProgress(long current){
+        PlayController controller = get(R.id.play_controller);
+        controller.setProgress(current);
     }
 }

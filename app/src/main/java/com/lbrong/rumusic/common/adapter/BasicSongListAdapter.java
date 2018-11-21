@@ -3,9 +3,11 @@ package com.lbrong.rumusic.common.adapter;
 import android.graphics.BitmapFactory;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
@@ -15,9 +17,7 @@ import com.lbrong.rumusic.common.utils.DateUtils;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import io.reactivex.Observable;
-import io.reactivex.Scheduler;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
@@ -42,10 +42,12 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
     protected void convert(BaseViewHolder helper,final Song item) {
         boolean isPlaying = playing != null && item.getSongId() == playing.getSongId();
         // cover
-        byte[] cover =item.getCover();
+        byte[] cover = item.getCover();
         if(ObjectHelper.requireNonNull(cover)){
             helper.setImageBitmap(R.id.iv_cover,BitmapFactory.decodeByteArray(cover,0,cover.length));
         } else {
+            // 恢复默认
+            helper.setImageResource(R.id.iv_cover,R.drawable.ic_play_detail_cover_default);
             // 获取封面
             asyncCover((ImageView) helper.getView(R.id.iv_cover),item);
         }
@@ -84,23 +86,27 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
         // 刷新实体
         this.playing = playing;
         // 刷新UI
-        notifyItemChanged(oldIndex);
-        notifyItemChanged(newIndex);
+        if(oldIndex != -1){
+            notifyItemChanged(oldIndex);
+        }
+        if(newIndex != -1){
+            notifyItemChanged(newIndex);
+        }
         // 计数器
         if(auto){
-            startTimer(0,playing.getDuration());
+            startTimer(0);
         }
     }
 
     /**
      * 开启时间计数器
      */
-    public void startTimer(long start,long total){
+    public void startTimer(long start){
         // 停止
         stopTimer();
         // 重新开启
         start = (start / 1000) + 1;
-        total = (total / 1000) - start;
+        long total = (playing.getDuration() / 1000) - start;
         timer = Observable.intervalRange(start,total,0,1,TimeUnit.SECONDS)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -146,7 +152,7 @@ public class BasicSongListAdapter extends BaseQuickAdapter<Song,BaseViewHolder> 
      * 计时器是否关闭
      */
     public boolean isTimerStop(){
-        return timer != null && timer.isDisposed();
+        return timer == null || timer.isDisposed();
     }
 
     /**

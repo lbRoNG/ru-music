@@ -30,4 +30,12 @@
 
     <include layout="@layout/content_main" />
 
+    <com.lbrong.rumusic.view.widget.PlayController
+        android:id="@+id/play_controller"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:transformPivotY="@dimen/play_controller_h"
+        android:translationY="@dimen/play_controller_h" />
+
 </android.support.design.widget.CoordinatorLayout>

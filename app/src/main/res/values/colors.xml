@@ -14,5 +14,6 @@
     <color name="textThemeSecondary">#6372dc</color>
 
     <color name="divider">#ececec</color>
+    <color name="pb_controller_bg">#862d3dbe</color>
 
 </resources>

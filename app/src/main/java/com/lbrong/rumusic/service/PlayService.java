@@ -11,15 +11,18 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
+import com.lbrong.rumusic.common.db.table.PlayList;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.music.MusicState;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
 import com.lbrong.rumusic.common.utils.SettingHelper;
 
+import org.litepal.LitePal;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
+
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
@@ -35,13 +38,14 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     private MediaPlayer mPlayer;
     // 正在播放的音乐
     private Song currentAudio;
-    private List<Song> playList;
+    // 播放列表
+    private PlayList playList;
     // 进度保存任务
     private Disposable recordTask;
     // 任务集合
     private CompositeDisposable compositeDisposable;
     // 记录间隔
-    private final static int RECORD_INTERVAL = 10;
+    private final static int RECORD_INTERVAL = 5;
 
     public class PlayBinder extends Binder {
         public PlayService getService(){
@@ -95,8 +99,13 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public void setAudio(@NonNull Song audio){
         try {
+            // 设置实体
             currentAudio = audio;
-
+            //　更新播放列表
+            playList.setPlayingId(currentAudio.getSongId());
+            playList.setRecord(1);
+            playList.updateAsync(playList.getId());
+            // 设置资源
             if(mPlayer != null && !TextUtils.isEmpty(currentAudio.getUrl())){
                 try {
                     mPlayer.reset();
@@ -124,10 +133,10 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
                 mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                     @Override
                     public void onPrepared(MediaPlayer mp) {
-                        // 准备完毕开始播放
-                        mPlayer.start();
                         // 开启记录
                         startRecord();
+                        // 准备完毕开始播放
+                        mPlayer.start();
                         // 发送播放音乐的通知
                         SendEventUtils.post(MusicState.MUSIC_PLAY);
                     }
@@ -145,10 +154,13 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      * 重新准备歌曲，准备完处于等待状态
      * 用于退出app后恢复播放
      */
-    public void rePrepare(final int start){
-        if(currentAudio != null && !TextUtils.isEmpty(currentAudio.getUrl())
-                && mPlayer != null){
+    public void rePrepare(@NonNull Song audio,final int start){
+        currentAudio = audio;
+        if(mPlayer != null && !TextUtils.isEmpty(currentAudio.getUrl())){
             try {
+                mPlayer.reset();
+                mPlayer.setDataSource(getApplicationContext()
+                        ,Uri.fromFile(new File(currentAudio.getUrl())));
                 mPlayer.prepareAsync();
                 mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                     @Override
@@ -160,7 +172,8 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
                 });
 
                 mPlayer.setOnCompletionListener(PlayService.this);
-            } catch (IllegalStateException e){
+            } catch (Exception e){
+                playFail();
                 e.printStackTrace();
             }
         }
@@ -286,31 +299,35 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     /**
      * 获取播放列表
      */
-    public List<Song> getPlayList() {
+    public PlayList getPlayList() {
         return playList;
     }
 
     /**
      * 设置播放列表
      */
-    public void setPlayList(List<Song> playList) {
+    public void setPlayList(PlayList playList) {
         this.playList = playList;
     }
 
     /**
      * 记录播放进度
-     * 10秒一同步
      */
     private void startRecord(){
         if(mPlayer != null){
             stopRecord();
             compositeDisposable.add(
                     recordTask = Observable.interval(0,RECORD_INTERVAL,TimeUnit.SECONDS)
-                            .subscribeOn(Schedulers.computation())
+                            .subscribeOn(Schedulers.io())
                             .subscribe(new Consumer<Long>() {
                                 @Override
                                 public void accept(Long aLong){
-
+                                    if(playList == null){
+                                        playList = LitePal.findFirst(PlayList.class);
+                                    }
+                                    playList.setPlayingId(currentAudio.getSongId());
+                                    playList.setRecord(mPlayer.getCurrentPosition());
+                                    playList.update(playList.getId());
                                 }
                             })
             );
