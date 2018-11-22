@@ -24,7 +24,9 @@
         <android.support.v7.widget.RecyclerView
             android:id="@+id/rv_song_list"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
+            android:layout_height="@dimen/home_songlist_h"
+            android:layout_marginStart="@dimen/dp16"
+            android:layout_marginEnd="@dimen/dp16"
             app:layout_scrollFlags="scroll|enterAlways" />
     </android.support.design.widget.AppBarLayout>
 

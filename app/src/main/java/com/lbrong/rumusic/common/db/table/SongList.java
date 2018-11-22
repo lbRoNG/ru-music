@@ -14,9 +14,12 @@ public class SongList extends LitePalSupport {
     private long id;
     private String name;
     private String coverUrl;
+    private byte[] cover;
+    private int coverRes;
     private long createDate;
     private int count;
-    private byte[] cover;
+    private long addedDate;
+    private long modifiedDate;
     private List<Song> songList;
 
     public long getId() {
@@ -73,5 +76,29 @@ public class SongList extends LitePalSupport {
 
     public void setSongList(List<Song> songList) {
         this.songList = songList;
+    }
+
+    public int getCoverRes() {
+        return coverRes;
+    }
+
+    public void setCoverRes(int coverRes) {
+        this.coverRes = coverRes;
+    }
+
+    public long getAddedDate() {
+        return addedDate;
+    }
+
+    public void setAddedDate(long addedDate) {
+        this.addedDate = addedDate;
+    }
+
+    public long getModifiedDate() {
+        return modifiedDate;
+    }
+
+    public void setModifiedDate(long modifiedDate) {
+        this.modifiedDate = modifiedDate;
     }
 }

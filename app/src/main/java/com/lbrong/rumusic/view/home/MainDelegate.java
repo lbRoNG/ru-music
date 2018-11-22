@@ -86,9 +86,20 @@ public class MainDelegate extends AppDelegate {
     }
 
     /**
-     * 设置歌曲列表
+     * 设置歌单列表
      */
     public void setSongListAdapter(BaseQuickAdapter adapter){
+        RecyclerView view = get(R.id.rv_song_list);
+        LinearLayoutManager manager = new LinearLayoutManager(getActivity());
+        manager.setOrientation(LinearLayoutManager.HORIZONTAL);
+        view.setLayoutManager(manager);
+        view.setAdapter(adapter);
+    }
+
+    /**
+     * 设置歌曲列表
+     */
+    public void setSongsAdapter(BaseQuickAdapter adapter){
         RecyclerView view = get(R.id.rv_list);
         view.setAdapter(adapter);
     }

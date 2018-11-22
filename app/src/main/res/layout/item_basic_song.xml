@@ -14,7 +14,7 @@
         android:layout_marginStart="@dimen/dp16"
         android:layout_marginEnd="@dimen/dp16"
         android:contentDescription="@null"
-        android:src="@drawable/ic_song_default_cover" />
+        android:src="@drawable/ic_song_default_cover_2" />
 
     <RelativeLayout
         android:id="@+id/rl_info"

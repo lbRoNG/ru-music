@@ -4,6 +4,7 @@
     <string name="server_error">遇到不可预料的问题，点我刷新试试</string>
     <string name="none_network">当前网络不可用，点我刷新试试</string>
     <string name="load">等等我哦&#8230;</string>
+    <string name="exit_app">再按一次退出哦</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>

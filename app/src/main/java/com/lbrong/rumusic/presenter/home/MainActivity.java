@@ -12,18 +12,22 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ImageView;
+
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.adapter.BasicSongListAdapter;
+import com.lbrong.rumusic.common.adapter.BasicSongsAdapter;
 import com.lbrong.rumusic.common.db.table.PlayList;
 import com.lbrong.rumusic.common.db.table.Song;
+import com.lbrong.rumusic.common.db.table.SongList;
 import com.lbrong.rumusic.common.event.music.MusicState;
 import com.lbrong.rumusic.common.net.rx.subscriber.DefaultSubscriber;
+import com.lbrong.rumusic.common.utils.BackHandlerHelper;
 import com.lbrong.rumusic.common.utils.EncryptionUtils;
 import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
@@ -39,6 +43,11 @@ import org.greenrobot.eventbus.Subscribe;
 import org.litepal.LitePal;
 import org.litepal.crud.callback.FindCallback;
 import org.litepal.crud.callback.UpdateOrDeleteCallback;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -59,13 +68,15 @@ public class MainActivity
        implements NavigationView.OnNavigationItemSelectedListener
         ,BaseQuickAdapter.OnItemClickListener,OnPlayControllerClickListener {
 
+    // 判断退出双击
+    private long exitFirstTime;
     // 适配器
-    private BasicSongListAdapter songListAdapter;
+    private BasicSongsAdapter songListAdapter;
     // 播放服务
     private PlayService playService;
     // 连接引用
     private ServiceConnection serviceConnection;
-    // 最后点击的时间戳
+    // 最后点击播放item的时间戳
     private long lastClickMS;
 
     @Override
@@ -92,7 +103,16 @@ public class MainActivity
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
-            super.onBackPressed();
+            if (!BackHandlerHelper.handleBackPress(this)) {
+                long secondTime = System.currentTimeMillis();
+                if (secondTime - exitFirstTime > 2000) {
+                    viewDelegate.toast(R.string.exit_app);
+                    exitFirstTime = System.currentTimeMillis();
+                } else {
+                    finish();
+                    System.exit(0);
+                }
+            }
         }
     }
 
@@ -189,11 +209,8 @@ public class MainActivity
                 showController();
                 viewDelegate.setPlayBtn(true);
                 break;
+            case MUSIC_STOP:
             case MUSIC_COMPLETE:
-                // 播放完成停止控制器动画
-                viewDelegate.pauseController();
-                viewDelegate.setPlayBtn(false);
-                break;
             case MUSIC_ALL_COMPLETE:
                 // 播放完成停止控制器动画
                 viewDelegate.pauseController();
@@ -247,7 +264,7 @@ public class MainActivity
         boolean isGranted = permissions.isGranted(Manifest.permission.READ_EXTERNAL_STORAGE);
         if (isGranted) {
             // 已通过授权
-            getLocalMusic();
+            getAllInfo();
         } else {
             boolean isRevoked = permissions.isRevoked(Manifest.permission.READ_EXTERNAL_STORAGE);
             if (!isRevoked) {
@@ -259,7 +276,7 @@ public class MainActivity
                             @Override
                             public void accept(Boolean aBoolean) {
                                 if (aBoolean) {
-                                    getLocalMusic();
+                                    getAllInfo();
                                 } else {
                                     // 刷新ErrorView提示
                                     ErrorView errorView = (ErrorView) viewDelegate.getErrorView();
@@ -320,10 +337,10 @@ public class MainActivity
     }
 
     /**
-     * 获取本地音乐
+     * 获取音乐和歌单
      * 主要通过自身数据库管理，只在数据库没有歌曲的时候，去扫描媒体库，其余时候都直接使用本地数据库
      */
-    private void getLocalMusic() {
+    private void getAllInfo() {
         addDisposable(
                 Flowable.fromCallable(new Callable<List<Song>>() {
                     @Override
@@ -336,36 +353,66 @@ public class MainActivity
                             @Override
                             public List<Song> apply(List<Song> songs){
                                 if(!ObjectHelper.requireNonNull(songs)){
-                                    // 本地扫描
+                                    // 数据库没有就本地扫描
                                     songs = MusicHelper.build().getLocalMusic(MainActivity.this);
-                                    // 添加到数据库
-                                    LitePal.saveAll(songs);
+                                    // 本地是否有数据
+                                    if(ObjectHelper.requireNonNull(songs)){
+                                        // 倒序
+                                        Collections.sort(songs, new Comparator<Song>() {
+                                            @Override
+                                            public int compare(Song o1, Song o2) {
+                                                int c;
+                                                if(o1.getAddedDate() < o2.getAddedDate()){
+                                                    c = 1;
+                                                } else if(o1.getAddedDate() > o2.getAddedDate()){
+                                                    c = -1;
+                                                } else {
+                                                    return o1.getTitle().compareTo(o2.getTitle());
+                                                }
+                                                return c;
+                                            }
+                                        });
+                                        // 添加到数据库
+                                        LitePal.saveAll(songs);
+                                        // 整理最新添加的歌单
+                                        addNewestSongList(songs);
+                                    }
                                 }
                                 return songs;
                             }
                         })
                         .observeOn(AndroidSchedulers.mainThread())
-                        .subscribeWith(new DefaultSubscriber<List<Song>>(){
+                        .doOnNext(new Consumer<List<Song>>() {
                             @Override
-                            public void onNext(List<Song> songs) {
+                            public void accept(List<Song> songs){
                                 if (ObjectHelper.requireNonNull(songs)) {
                                     // 隐藏
                                     viewDelegate.getErrorView().hide();
                                     // 创建适配器
-                                    songListAdapter = new BasicSongListAdapter(songs){
-                                        @Override
-                                        protected void asyncCover(ImageView view, Song item) {
-                                            // todo 重新加载封面
-                                        }
-                                    };
+                                    songListAdapter = new BasicSongsAdapter(songs);
                                     // 设置
                                     songListAdapter.setOnItemClickListener(MainActivity.this);
                                     songListAdapter.bindToRecyclerView((RecyclerView) viewDelegate.get(R.id.rv_list));
-                                    viewDelegate.setSongListAdapter(songListAdapter);
+                                    viewDelegate.setSongsAdapter(songListAdapter);
                                 } else {
                                     ErrorView errorView = (ErrorView) viewDelegate.getErrorView();
                                     errorView.setText("没有本地音乐哦，快去搜索添加吧！").show();
                                 }
+                            }
+                        })
+                        .observeOn(Schedulers.io())
+                        .map(new Function<List<Song>, List<SongList>>() {
+                            @Override
+                            public List<SongList> apply(List<Song> songs){
+                                return LitePal.findAll(SongList.class);
+                            }
+                        })
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribeWith(new DefaultSubscriber<List<SongList>>(){
+                            @Override
+                            public void onNext(List<SongList> songLists) {
+                                BasicSongListAdapter adapter = new BasicSongListAdapter(songLists);
+                                viewDelegate.setSongListAdapter(adapter);
                             }
                         })
         );
@@ -382,6 +429,7 @@ public class MainActivity
         PlayList playList = playService.getPlayList();
         String serviceMD5 = playList == null ? "" : EncryptionUtils.md5(playList.getSongs().toString());
         String nowMD5 = EncryptionUtils.md5(songs.toString());
+        // 对比md5就得知歌曲合集是否相同
         if(!TextUtils.equals(serviceMD5,nowMD5)){
             LitePal.deleteAllAsync(PlayList.class)
                     .listen(new UpdateOrDeleteCallback() {
@@ -391,12 +439,12 @@ public class MainActivity
                             PlayList playList = new PlayList();
                             playList.setCount(songs.size());
                             playList.setSongs(songs);
+                            playList.save();
                             // 设置给服务并播放
                             playService.setPlayList(playList);
                             playService.setAudio(item);
                             playService.playAudio();
-                            // 保存
-                            playList.saveAsync();
+
                         }
                     });
         } else {
@@ -492,6 +540,34 @@ public class MainActivity
             viewDelegate.setPlayBtn(false);
             viewDelegate.setProgress(playList.getRecord());
         }
+    }
+
+    /**
+     * 整理最新歌单
+     */
+    private void addNewestSongList(List<Song> songs){
+        List<Song> newest = MusicHelper.build().settleNewestAdd(songs);
+        long date = System.currentTimeMillis() / 1000;
+        // 设置歌单
+        SongList songList = new SongList();
+        songList.setName("最近添加");
+        songList.setSongList(newest);
+        songList.setCount(newest.size());
+        songList.setAddedDate(date);
+        songList.setModifiedDate(date);
+        // 获取专辑封面
+        for (Song item : newest) {
+            if(item.getCover() != null){
+                songList.setCover(item.getCover());
+                break;
+            }
+        }
+        // 如果集合内没有封面，就随机设置
+        if(songList.getCover() == null){
+            songList.setCoverRes(MusicHelper.build().getRandomHomeSongListCoverResId());
+        }
+        // 保存
+        songList.save();
     }
 
     /**
