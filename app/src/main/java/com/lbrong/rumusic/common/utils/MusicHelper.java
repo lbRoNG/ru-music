@@ -10,7 +10,11 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.lbrong.rumusic.R;
+import com.lbrong.rumusic.common.db.table.PlayList;
+import com.lbrong.rumusic.common.db.table.PlayRecord;
 import com.lbrong.rumusic.common.db.table.Song;
+import com.lbrong.rumusic.common.type.PlayMethodEnum;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
@@ -169,5 +173,118 @@ public final class MusicHelper {
         int[] res = new int[]{R.drawable.ic_home_songlist_default_cover_1,R.drawable.ic_home_songlist_default_cover_2,
                 R.drawable.ic_home_songlist_default_cover_3,R.drawable.ic_home_songlist_default_cover_4};
         return res[ThreadLocalRandom.current().nextInt(0, 4 + 1)];
+    }
+
+    /**
+     * 下一首
+     * @param playList 播放列表实体
+     * @param fromUser 是否是用户主动切换
+     * @return 返回null表示播放异常，为空的Song实体，表示全部播放完成
+     */
+    public @Nullable Song next(@NonNull PlayList playList,boolean fromUser){
+       try {
+           // 默认使用正序播放列表
+           List<Song> playSongs = playList.getSongs();
+           // 播放方式
+           PlayMethodEnum method = SettingHelper.build().getPlayMethod();
+           if(method == PlayMethodEnum.RANDOM){
+               playSongs = playList.getRandomSongs();
+           }
+           // 列表长度
+           int size = playSongs.size();
+           // 正在播放的歌曲在列表中的位置
+           int index = 0;
+           for (int i = 0; i < playSongs.size(); i++) {
+               if(playSongs.get(i).getSongId() == playList.getPlayingId()){
+                   index = i;
+                   break;
+               }
+           }
+           // 当前歌曲是否重复
+           PlayRecord record = null;
+           for (PlayRecord temp : playList.getPlayRecords()) {
+               if(temp.getSongId() == playList.getPlayingId()){
+                   record = temp;
+                   break;
+               }
+           }
+           // 如果不是用户切换且有重复，直接返回
+           if (!fromUser && record != null && record.getRepeat() > 0){
+               int repeat = record.getRepeat();
+               record.setRepeat(--repeat);
+               record.updateAsync(record.getId());
+               return playSongs.get(index);
+           }
+           // 下一首的位置
+           int next = index + 1;
+           switch (method){
+               case ORDER:
+                   if(!fromUser){
+                       // 已经是最后一首
+                       if(size == next){
+                           // 返回内容为空
+                           // 标识播放全部结束
+                           return new Song();
+                       }
+                       break;
+                   }
+               case ORDER_LOOP:
+               case RANDOM:
+                   // 随机播放依赖播放列表，下一曲的逻辑和顺序循环一样
+                   // 最后一首就从头开始
+                   if(size == next){
+                       next = 0;
+                   }
+                   break;
+               case SINGLE:
+                   if(!fromUser){
+                       // 单曲循环
+                       next = index;
+                   }
+                   break;
+           }
+           return playSongs.get(next);
+       } catch (Exception e){
+           return null;
+       }
+    }
+
+    /**
+     * 根据播放方法和播放列表计算出上一首要播放的歌曲
+     * 触发上一曲肯定是用户主动切换
+     * @param playList 播放列表
+     * @return 返回null表示播放异常
+     */
+    public @Nullable Song previous(@NonNull PlayList playList){
+        try {
+            // 默认使用正序播放列表
+            List<Song> playSongs = playList.getSongs();
+            // 播放方式
+            PlayMethodEnum method = SettingHelper.build().getPlayMethod();
+            if(method == PlayMethodEnum.RANDOM){
+                playSongs = playList.getRandomSongs();
+            }
+            // 列表长度
+            int size = playSongs.size();
+            // 在列表中的位置
+            int index = 0;
+            for (int i = 0; i < playSongs.size(); i++) {
+                if(playSongs.get(i).getSongId() == playList.getPlayingId()){
+                    index = i;
+                    break;
+                }
+            }
+            // 下一首的位置
+            int previous = index - 1;
+            // 随机播放依赖播放列表，下一曲的逻辑和顺序循环一样
+            // 最后一首就从头开始
+            if(previous == -1){
+                previous = size - 1;
+            }
+
+            return playSongs.get(previous);
+        } catch (Exception e){
+            return null;
+        }
     }
 }

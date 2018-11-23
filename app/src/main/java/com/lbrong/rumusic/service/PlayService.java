@@ -14,6 +14,7 @@ import android.text.TextUtils;
 import com.lbrong.rumusic.common.db.table.PlayList;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.event.music.MusicState;
+import com.lbrong.rumusic.common.utils.MusicHelper;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
 import com.lbrong.rumusic.common.utils.SettingHelper;
 
@@ -194,11 +195,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      */
     public void rePlay(){
         if(mPlayer != null){
-            if(mPlayer.isPlaying()){
-                mPlayer.seekTo(0);
-            } else {
-                mPlayer.start();
-            }
+            mPlayer.seekTo(0);
             SendEventUtils.post(MusicState.MUSIC_RE_PLAY);
         }
     }
@@ -278,7 +275,24 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      * 根据当前播放列表
      */
     public void next(final boolean fromUser){
-
+        // 停止原来的播放
+        mPlayer.stop();
+        // 获取下一首
+        Song song = MusicHelper.build().next(playList,fromUser);
+        if(song != null){
+            if(song.getSongId() == 0){
+                // 列表全部播放完成
+                SendEventUtils.post(MusicState.MUSIC_ALL_COMPLETE);
+            } else {
+                // 播放开始
+                currentAudio = song;
+                setAudio(currentAudio);
+                playAudio();
+            }
+        } else {
+            // 播放异常
+            SendEventUtils.post(MusicState.MUSIC_STOP);
+        }
     }
 
     /**
@@ -286,7 +300,19 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
      * 根据当前播放列表
      */
     public void previous(){
-
+        // 停止原来的播放
+        mPlayer.stop();
+        // 获取上一首
+        Song song = MusicHelper.build().previous(playList);
+        if(song == null){
+            // 播放异常
+            SendEventUtils.post(MusicState.MUSIC_STOP);
+        } else {
+            // 播放开始
+            currentAudio = song;
+            setAudio(currentAudio);
+            playAudio();
+        }
     }
 
     /**

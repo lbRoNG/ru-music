@@ -12,10 +12,8 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
-
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.chad.library.adapter.base.BaseQuickAdapter;
@@ -43,9 +41,6 @@ import org.greenrobot.eventbus.Subscribe;
 import org.litepal.LitePal;
 import org.litepal.crud.callback.FindCallback;
 import org.litepal.crud.callback.UpdateOrDeleteCallback;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -152,10 +147,7 @@ public class MainActivity
     @Override
     protected void onStart() {
         if(playService != null && playService.isPlaying()){
-            viewDelegate.resumeController(playService.getCurrentPosition());
-            if(songListAdapter != null){
-                songListAdapter.startTimer(playService.getCurrentPosition());
-            }
+            resumeAllTimer();
         }
         super.onStart();
     }
@@ -163,10 +155,7 @@ public class MainActivity
     @Override
     protected void onStop() {
         if(playService != null && playService.isPlaying()){
-            viewDelegate.pauseController();
-            if(songListAdapter != null){
-                songListAdapter.stopTimer();
-            }
+           pauseAllTimer();
         }
         super.onStop();
     }
@@ -183,12 +172,19 @@ public class MainActivity
             if (temp instanceof Song && playService != null) {
                 Song click = (Song) temp;
                 Song playing = playService.getCurrentAudio();
+                // 不相等就开启播放
                 if (!click.equals(playing)) {
                     // 后台开启播放
                     startPlay(click);
                 } else {
-                    // 重新播放
-                    replay();
+                    // 相等情况下，正在播放就重头播放，否则就继续播放
+                    if(playService.isPlaying()){
+                        // 重新播放
+                        replay();
+                    } else {
+                        // 继续播放
+                        playService.continuePlay();
+                    }
                 }
             }
         }
@@ -199,6 +195,8 @@ public class MainActivity
     @Subscribe
     public void onEvent(MusicState state){
         switch (state){
+            // 重新播放
+            case MUSIC_RE_PLAY:
             // 新歌曲播放
             case MUSIC_PLAY:
                 // 更新列表
@@ -216,6 +214,14 @@ public class MainActivity
                 viewDelegate.pauseController();
                 viewDelegate.setPlayBtn(false);
                 break;
+            case MUSIC_CONTINUE_PLAY:
+                viewDelegate.setPlayBtn(true);
+                resumeAllTimer();
+                break;
+            case MUSIC_PAUSE:
+                viewDelegate.setPlayBtn(false);
+                pauseAllTimer();
+                break;
         }
     }
 
@@ -226,10 +232,6 @@ public class MainActivity
     public void onAudioPlay() {
         if(playService != null){
             playService.continuePlay();
-            viewDelegate.resumeController(playService.getCurrentPosition());
-            if(songListAdapter != null){
-                songListAdapter.startTimer(playService.getCurrentPosition());
-            }
         }
     }
 
@@ -240,10 +242,6 @@ public class MainActivity
     public void onAudioPause() {
         if(playService != null){
             playService.pause();
-            viewDelegate.pauseController();
-            if(songListAdapter != null){
-                songListAdapter.stopTimer();
-            }
         }
     }
 
@@ -252,7 +250,30 @@ public class MainActivity
      */
     @Override
     public void onAudioNext() {
-        viewDelegate.hideController();
+        if(playService != null){
+            playService.next(true);
+        }
+    }
+
+    /**
+     * 恢复所有控制器工作状态
+     */
+    private void resumeAllTimer(){
+        long current = playService.getCurrentPosition();
+        viewDelegate.resumeController(current);
+        if(songListAdapter != null){
+            songListAdapter.startTimer(current);
+        }
+    }
+
+    /**
+     * 暂停所有控制器工作状态
+     */
+    private void pauseAllTimer(){
+        viewDelegate.pauseController();
+        if(songListAdapter != null){
+            songListAdapter.stopTimer();
+        }
     }
 
     /**
@@ -458,7 +479,9 @@ public class MainActivity
      * 重新播放
      */
     private void replay() {
-        playService.rePlay();
+        if(playService != null){
+            playService.rePlay();
+        }
     }
 
     /**
