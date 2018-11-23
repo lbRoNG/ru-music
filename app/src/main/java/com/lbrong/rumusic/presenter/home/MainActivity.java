@@ -20,6 +20,7 @@ import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.adapter.BasicSongListAdapter;
 import com.lbrong.rumusic.common.adapter.BasicSongsAdapter;
+import com.lbrong.rumusic.common.adapter.HomePlayListSongAdapter;
 import com.lbrong.rumusic.common.db.table.PlayList;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.db.table.SongList;
@@ -64,15 +65,19 @@ public class MainActivity
         ,BaseQuickAdapter.OnItemClickListener,OnPlayControllerClickListener {
 
     // 判断退出双击
-    private long exitFirstTime;
-    // 适配器
+    private long exitFirstMS;
+    // 最后点击播放item的时间戳
+    private long lastClickMS;
+    // 最后点击播放列表的时间戳
+    private long lastClickPlayListMS;
+    // 歌曲适配器
     private BasicSongsAdapter songListAdapter;
+    // 播放列表适配器
+    private HomePlayListSongAdapter playListAdapter;
     // 播放服务
     private PlayService playService;
     // 连接引用
     private ServiceConnection serviceConnection;
-    // 最后点击播放item的时间戳
-    private long lastClickMS;
 
     @Override
     protected Class<MainDelegate> getDelegateClass() {
@@ -94,19 +99,28 @@ public class MainActivity
 
     @Override
     public void onBackPressed() {
+        // 播放列表隐藏
+        if(viewDelegate.isShowPlayList()){
+            viewDelegate.hidePlayList();
+            return;
+        }
+
+        // 侧滑菜单隐藏
         DrawerLayout drawer = viewDelegate.get(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
-        } else {
-            if (!BackHandlerHelper.handleBackPress(this)) {
-                long secondTime = System.currentTimeMillis();
-                if (secondTime - exitFirstTime > 2000) {
-                    viewDelegate.toast(R.string.exit_app);
-                    exitFirstTime = System.currentTimeMillis();
-                } else {
-                    finish();
-                    System.exit(0);
-                }
+            return;
+        }
+
+        // 双击退出
+        if (!BackHandlerHelper.handleBackPress(this)) {
+            long secondTime = System.currentTimeMillis();
+            if (secondTime - exitFirstMS > 2000) {
+                viewDelegate.toast(R.string.exit_app);
+                exitFirstMS = System.currentTimeMillis();
+            } else {
+                finish();
+                System.exit(0);
             }
         }
     }
@@ -146,6 +160,7 @@ public class MainActivity
 
     @Override
     protected void onStart() {
+        // 恢复进度计时
         if(playService != null && playService.isPlaying()){
             resumeAllTimer();
         }
@@ -154,6 +169,7 @@ public class MainActivity
 
     @Override
     protected void onStop() {
+        // 停止进度计时
         if(playService != null && playService.isPlaying()){
            pauseAllTimer();
         }
@@ -201,7 +217,12 @@ public class MainActivity
             case MUSIC_PLAY:
                 // 更新列表
                 if(songListAdapter != null && playService != null){
-                    songListAdapter.setPlaying(playService.getCurrentAudio(),true);
+                    Song current = playService.getCurrentAudio();
+                    songListAdapter.setPlaying(current,true);
+                    if(playListAdapter != null){
+                        playListAdapter.setPlaying(current);
+                        viewDelegate.scrollToPlayingAsPlayList(playListAdapter.getPlayingPos());
+                    }
                 }
                 // 设置并显示控制器
                 showController();
@@ -253,6 +274,30 @@ public class MainActivity
         if(playService != null){
             playService.next(true);
         }
+    }
+
+    /**
+     * 播放列表点击
+     */
+    @Override
+    public void onPlayList() {
+        long currentMS = System.currentTimeMillis();
+        if(currentMS - lastClickPlayListMS >= 500){
+            if(viewDelegate.isShowPlayList()){
+                viewDelegate.hidePlayList();
+            } else {
+                if(playService != null){
+                    if(playListAdapter == null){
+                        playListAdapter = new HomePlayListSongAdapter(playService.getPlayList());
+                        playListAdapter.setOnItemClickListener(this);
+                        viewDelegate.setPlayListSongsAdapter(playListAdapter);
+                    }
+                    viewDelegate.showPlayList();
+                    viewDelegate.scrollToPlayingAsPlayList(playListAdapter.getPlayingPos());
+                }
+            }
+        }
+        lastClickPlayListMS = currentMS;
     }
 
     /**
@@ -512,7 +557,9 @@ public class MainActivity
             if(plying != null){
                 viewDelegate.setController(plying.getCover(),plying.getTitle()
                         ,plying.getArtist(),plying.getDuration(),playService.getCurrentPosition(),true);
-                viewDelegate.showController();
+                if(!viewDelegate.isShowController()){
+                    viewDelegate.showController();
+                }
             }
         }
     }
@@ -601,6 +648,9 @@ public class MainActivity
         @Override
         public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
             super.onScrolled(recyclerView, dx, dy);
+            // 隐藏播放列表
+            viewDelegate.hidePlayList();
+            // 恢复列表播放进度
             if(songListAdapter != null && playService != null){
                 int start = viewDelegate.getLayoutManager().findFirstVisibleItemPosition();
                 int end = viewDelegate.getLayoutManager().findLastVisibleItemPosition();

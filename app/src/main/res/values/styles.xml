@@ -33,4 +33,9 @@
         <item name="android:background">@color/colorWhite</item>
     </style>
 
+    <style name="pop_bottom_anim">
+        <item name="android:windowExitAnimation">@anim/pop_action_sheet_exit</item>
+        <item name="android:windowEnterAnimation">@anim/pop_action_sheet_enter</item>
+    </style>
+
 </resources>

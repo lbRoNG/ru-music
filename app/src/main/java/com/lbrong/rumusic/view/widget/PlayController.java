@@ -60,6 +60,7 @@ public class PlayController
         pbDuration = findViewById(R.id.pb_duration);
         ivPlay.setOnClickListener(this);
         findViewById(R.id.iv_next).setOnClickListener(this);
+        findViewById(R.id.iv_list).setOnClickListener(this);
         tvSongName.setSelected(true);
     }
 
@@ -92,6 +93,10 @@ public class PlayController
                     callback.onAudioNext();
                 }
                 break;
+            case R.id.iv_list:
+                if (callback != null){
+                    callback.onPlayList();
+                }
         }
     }
 

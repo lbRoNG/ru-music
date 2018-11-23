@@ -1,5 +1,6 @@
 package com.lbrong.rumusic.view.home;
 
+import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.NavigationView;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
@@ -22,6 +23,9 @@ import com.lbrong.rumusic.view.widget.PlayController;
  * @since 2018/10/18
  */
 public class MainDelegate extends AppDelegate {
+
+    // 播放列表显示的持续时间
+    private int oldOffset;
 
     @Override
     public int getRootLayoutId() {
@@ -46,8 +50,20 @@ public class MainDelegate extends AppDelegate {
     @Override
     public void initWidget() {
         super.initWidget();
+        // 初始化控件
         initDrawer();
         initToolbar();
+        // 监听滚动，隐藏播放列表
+        AppBarLayout appbar = get(R.id.appbar);
+        appbar.addOnOffsetChangedListener(new AppBarLayout.OnOffsetChangedListener() {
+            @Override
+            public void onOffsetChanged(AppBarLayout appBarLayout, int i) {
+                if(Math.abs(i) - Math.abs(oldOffset) >= 5){
+                    hidePlayList();
+                }
+                oldOffset = i;
+            }
+        });
     }
 
     /**
@@ -105,6 +121,14 @@ public class MainDelegate extends AppDelegate {
     }
 
     /**
+     * 设置歌曲列表
+     */
+    public void setPlayListSongsAdapter(BaseQuickAdapter adapter){
+        RecyclerView view = get(R.id.rv_play_list);
+        view.setAdapter(adapter);
+    }
+
+    /**
      * 设置滚动监听
      */
     public void setOnListScrollListener(RecyclerView.OnScrollListener listener){
@@ -132,22 +156,26 @@ public class MainDelegate extends AppDelegate {
      * 显示控制器
      */
     public void showController(){
-        PlayController controller = get(R.id.play_controller);
-        float old = getActivity().getResources().getDimension(R.dimen.play_controller_h);
-        if(old == controller.getTranslationY()){
-            controller.animate().translationY(1).setDuration(300).start();
+        if(!isShowController()){
+            get(R.id.play_controller).animate().translationY(1).setDuration(500).start();
         }
     }
 
-    /**f
-     * 显示控制器
+    /**
+     * 隐藏控制器
      */
     public void hideController(){
-        PlayController controller = get(R.id.play_controller);
-        if(1 == (int) controller.getTranslationY()){
+        if(isShowController()){
             float old = getActivity().getResources().getDimension(R.dimen.play_controller_h);
-            controller.animate().translationY(old).setDuration(300).start();
+            get(R.id.play_controller).animate().translationY(old).setDuration(500).start();
         }
+    }
+
+    /**
+     * 控制器是否显示
+     */
+    public boolean isShowController(){
+        return 1 == (int) get(R.id.play_controller).getTranslationY();
     }
 
     /**
@@ -188,5 +216,46 @@ public class MainDelegate extends AppDelegate {
     public void setProgress(long current){
         PlayController controller = get(R.id.play_controller);
         controller.setProgress(current);
+    }
+
+    /**
+     * 显示播放列表
+     */
+    public void showPlayList(){
+        if(!isShowPlayList()){
+            get(R.id.rv_play_list)
+                    .animate()
+                    .translationY(1)
+                    .setDuration(500)
+                    .start();
+        }
+    }
+
+    /**f
+     * 隐藏播放列表
+     */
+    public void hidePlayList(){
+        if(isShowPlayList()){
+            float old = getActivity().getResources().getDimension(R.dimen.home_playlist_h);
+            get(R.id.rv_play_list).animate()
+                    .translationY(old)
+                    .setDuration(500)
+                    .start();
+        }
+    }
+
+    /**
+     * 播放列表是否显示
+     */
+    public boolean isShowPlayList(){
+        return 1 == (int) get(R.id.rv_play_list).getTranslationY();
+    }
+
+    /**
+     * 滑动到播放列表中正在播放的曲目
+     */
+    public void scrollToPlayingAsPlayList(int position){
+        RecyclerView view = get(R.id.rv_play_list);
+        view.scrollToPosition(position);
     }
 }

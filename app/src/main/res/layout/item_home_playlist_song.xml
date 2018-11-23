@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/tv_song_name"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/home_playlist_song_h"
+    android:drawableEnd="@drawable/ic_home_playlist_song_playing"
+    android:drawablePadding="@dimen/dp8"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:paddingStart="@dimen/dp16"
+    android:paddingEnd="@dimen/dp16"
+    android:singleLine="true"
+    android:textColor="@color/textPrimary"
+    tools:text="Love Song" />

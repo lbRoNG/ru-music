@@ -2,12 +2,14 @@
 <android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
     tools:context=".presenter.home.MainActivity">
 
     <android.support.design.widget.AppBarLayout
+        android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:theme="@style/AppTheme.AppBarOverlay"
@@ -37,7 +39,20 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
+        android:elevation="2dp"
         android:transformPivotY="@dimen/play_controller_h"
         android:translationY="@dimen/play_controller_h" />
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/rv_play_list"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/home_playlist_h"
+        android:layout_gravity="bottom"
+        android:background="@color/colorWhite"
+        android:elevation="1dp"
+        android:paddingBottom="@dimen/play_controller_h"
+        android:transformPivotY="@dimen/home_playlist_h"
+        android:translationY="@dimen/home_playlist_h"
+        app:layoutManager="android.support.v7.widget.LinearLayoutManager" />
 
 </android.support.design.widget.CoordinatorLayout>
