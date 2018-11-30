@@ -22,12 +22,11 @@ public class Song extends LitePalSupport {
     @Column(defaultValue = "群星")
     private String artist;
     private String url;
-    private String coverUrl;
-    private int coverRes;
     private long size;
     private long duration;
     private int music;
     private int bitrate;
+    private String coverUrl;
     private byte[] cover;
     private long addedDate;
     private long modifiedDate;
@@ -185,13 +184,5 @@ public class Song extends LitePalSupport {
 
     public void setModifiedDate(long modifiedDate) {
         this.modifiedDate = modifiedDate;
-    }
-
-    public int getCoverRes() {
-        return coverRes;
-    }
-
-    public void setCoverRes(int coverRes) {
-        this.coverRes = coverRes;
     }
 }

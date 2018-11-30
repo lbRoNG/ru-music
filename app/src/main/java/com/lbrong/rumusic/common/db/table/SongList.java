@@ -15,7 +15,6 @@ public class SongList extends LitePalSupport {
     private String name;
     private String coverUrl;
     private byte[] cover;
-    private int coverRes;
     private long createDate;
     private int count;
     private long addedDate;
@@ -76,14 +75,6 @@ public class SongList extends LitePalSupport {
 
     public void setSongList(List<Song> songList) {
         this.songList = songList;
-    }
-
-    public int getCoverRes() {
-        return coverRes;
-    }
-
-    public void setCoverRes(int coverRes) {
-        this.coverRes = coverRes;
     }
 
     public long getAddedDate() {

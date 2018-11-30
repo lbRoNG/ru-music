@@ -49,6 +49,11 @@
 
         </activity>
 
+        <!--播放页面-->
+        <activity
+            android:name=".presenter.play.PlayActivity"
+            android:screenOrientation="portrait" />
+
     </application>
 
 </manifest>

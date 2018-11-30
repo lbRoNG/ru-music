@@ -22,14 +22,17 @@ public class HomePlayListSongAdapter extends BaseQuickAdapter<Song,BaseViewHolde
     public HomePlayListSongAdapter(@NonNull PlayList playList) {
         super(R.layout.item_home_playlist_song,playList.getSongs());
         this.playList = playList;
+        for (Song s : playList.getSongs()) {
+            if(s.getSongId() == playList.getPlayingId()){
+                playing = s;
+                break;
+            }
+        }
     }
 
     @Override
     protected void convert(BaseViewHolder helper,final Song item) {
         boolean isPlaying = playList.getPlayingId() == item.getSongId();
-        if(isPlaying){
-            this.playing = item;
-        }
         helper.setText(R.id.tv_song_name,item.getTitle());
         helper.setTextColor(R.id.tv_song_name,ContextCompat.getColor(
                 mContext,isPlaying ? R.color.colorWhite : R.color.textPrimary));

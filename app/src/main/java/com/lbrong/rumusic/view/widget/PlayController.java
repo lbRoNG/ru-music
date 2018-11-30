@@ -48,6 +48,15 @@ public class PlayController
 
     public PlayController(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        setClickable(true);
+        setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(callback != null){
+                    callback.onGo();
+                }
+            }
+        });
         init();
     }
 
@@ -178,7 +187,7 @@ public class PlayController
         // 总时间，最大设置60分钟一首
         long total = 60 * 60 * 1000;
         // 一圈毫秒值
-        long one = 8000;
+        long one = 12000;
         // 圈数
         long count = total / one;
         // 取消原有动画

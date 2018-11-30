@@ -4,9 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="@dimen/play_controller_h"
     android:animateLayoutChanges="true"
-    android:background="@color/colorAccent"
-    android:clickable="true"
-    android:focusable="true">
+    android:background="@color/colorAccent">
 
     <ProgressBar
         android:id="@+id/pb_duration"

@@ -1,6 +1,7 @@
 package com.lbrong.rumusic.presenter.home;
 
 import android.Manifest;
+import android.app.ActivityOptions;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -34,6 +35,7 @@ import com.lbrong.rumusic.common.utils.PermissionPageUtils;
 import com.lbrong.rumusic.common.utils.SendEventUtils;
 import com.lbrong.rumusic.iface.listener.OnPlayControllerClickListener;
 import com.lbrong.rumusic.presenter.base.ActivityPresenter;
+import com.lbrong.rumusic.presenter.play.PlayActivity;
 import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.home.MainDelegate;
 import com.lbrong.rumusic.view.widget.ErrorView;
@@ -274,6 +276,15 @@ public class MainActivity
         if(playService != null){
             playService.next(true);
         }
+    }
+
+    /**
+     * 主体点击
+     */
+    @Override
+    public void onGo() {
+        Intent send = new Intent(this,PlayActivity.class);
+        startActivity(send,ActivityOptions.makeSceneTransitionAnimation(this).toBundle());
     }
 
     /**
@@ -634,7 +645,7 @@ public class MainActivity
         }
         // 如果集合内没有封面，就随机设置
         if(songList.getCover() == null){
-            songList.setCoverRes(MusicHelper.build().getRandomHomeSongListCoverResId());
+            songList.setCover(MusicHelper.build().getRandomHomeSongListCover(this));
         }
         // 保存
         songList.save();

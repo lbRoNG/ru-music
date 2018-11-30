@@ -1,19 +1,22 @@
 package com.lbrong.rumusic.common.adapter;
 
-import android.graphics.BitmapFactory;
 import android.support.annotation.Nullable;
 import android.support.v4.content.ContextCompat;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.bumptech.glide.Glide;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.db.table.Song;
 import com.lbrong.rumusic.common.utils.DateUtils;
 import com.lbrong.rumusic.common.utils.ObjectHelper;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -41,10 +44,10 @@ public class BasicSongsAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
         // cover
         byte[] cover = item.getCover();
         if(ObjectHelper.requireNonNull(cover)){
-            helper.setImageBitmap(R.id.iv_cover,BitmapFactory.decodeByteArray(cover,0,cover.length));
+            Glide.with(mContext)
+                    .load(cover)
+                    .into((ImageView) helper.getView(R.id.iv_cover));
         } else {
-            // 恢复默认
-            helper.setImageResource(R.id.iv_cover,item.getCoverRes());
             // 获取封面
             asyncCover((ImageView) helper.getView(R.id.iv_cover),item);
         }

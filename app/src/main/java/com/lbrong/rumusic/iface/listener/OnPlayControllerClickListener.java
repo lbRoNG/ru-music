@@ -9,4 +9,5 @@ public interface OnPlayControllerClickListener {
     void onAudioPause();
     void onAudioNext();
     void onPlayList();
+    void onGo();
 }
