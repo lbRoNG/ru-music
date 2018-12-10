@@ -105,8 +105,8 @@ public class BasicSongsAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
         // 停止
         stopTimer();
         // 重新开启
-        start = (start / 1000) + 1;
-        long total = (playing.getDuration() / 1000) - start;
+        start = (start / 1000);
+        long total = (playing.getDuration() / 1000) - start + 1;
         timer = Observable.intervalRange(start,total,0,1,TimeUnit.SECONDS)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())

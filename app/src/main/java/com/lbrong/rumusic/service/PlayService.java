@@ -222,7 +222,7 @@ public class PlayService extends Service implements MediaPlayer.OnCompletionList
     }
 
     /**
-     * 暂停播放
+     * 继续播放
      */
     public void continuePlay(){
         if(mPlayer != null && !mPlayer.isPlaying()){

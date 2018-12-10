@@ -167,7 +167,7 @@
             android:background="@drawable/shape_play_seekbar_border">
 
             <SeekBar
-                android:id="@+id/sek_song"
+                android:id="@+id/skb_song"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:elevation="8dp"
@@ -213,7 +213,7 @@
         android:id="@+id/rv_play_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/colorAccent"
+        android:background="@color/colorPrimary"
         android:visibility="gone"
         app:layoutManager="android.support.v7.widget.LinearLayoutManager"
         app:layout_behavior="@string/bottom_sheet_behavior" />

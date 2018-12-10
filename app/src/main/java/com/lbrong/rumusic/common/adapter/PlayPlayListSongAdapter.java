@@ -2,7 +2,7 @@ package com.lbrong.rumusic.common.adapter;
 
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
-import android.widget.TextView;
+import android.view.View;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
@@ -25,13 +25,13 @@ import io.reactivex.schedulers.Schedulers;
  * @since 2018/10/19
  * 首页播放列表适配器
  */
-public class HomePlayListSongAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
+public class PlayPlayListSongAdapter extends BaseQuickAdapter<Song,BaseViewHolder> {
     private PlayList playList;
     private Song playing;
     private Disposable task;
 
-    public HomePlayListSongAdapter(@NonNull PlayList playList) {
-        super(R.layout.item_home_playlist_song,new ArrayList<Song>());
+    public PlayPlayListSongAdapter(@NonNull PlayList playList) {
+        super(R.layout.item_play_playlist_song,new ArrayList<Song>());
         this.playList = playList;
         task();
     }
@@ -72,13 +72,22 @@ public class HomePlayListSongAdapter extends BaseQuickAdapter<Song,BaseViewHolde
     @Override
     protected void convert(BaseViewHolder helper,final Song item) {
         boolean isPlaying = playList.getPlayingId() == item.getSongId();
+        helper.setText(R.id.tv_num,String.valueOf(helper.getAdapterPosition() + 1));
         helper.setText(R.id.tv_song_name,item.getTitle());
+        helper.setText(R.id.tv_artist,item.getArtist());
         helper.setTextColor(R.id.tv_song_name,ContextCompat.getColor(
-                mContext,isPlaying ? R.color.colorWhite : R.color.textPrimary));
-        helper.setBackgroundColor(R.id.tv_song_name,ContextCompat.getColor(
-                mContext,isPlaying ? R.color.colorAccent : R.color.colorWhite));
-        TextView view = helper.getView(R.id.tv_song_name);
-        view.setCompoundDrawablesWithIntrinsicBounds(0,0,isPlaying ? R.drawable.ic_home_playlist_song_playing : 0,0);
+                mContext,isPlaying ? R.color.textThemePrimary : R.color.textPrimary));
+        helper.setTextColor(R.id.tv_artist,ContextCompat.getColor(
+                mContext,isPlaying ? R.color.textThemeSecondary : R.color.textThirdly));
+        helper.setBackgroundColor(R.id.root,ContextCompat.getColor(
+                mContext,isPlaying ? R.color.colorWhite : R.color.colorPrimary));
+        helper.getView(R.id.root).setElevation(isPlaying ? 1f : 0f);
+        int bitrate = item.getBitrate();
+        boolean showBitrate = bitrate >= 320;
+        if(showBitrate){
+            helper.setImageResource(R.id.iv_tone,bitrate > 350 ? R.drawable.ic_song_sq : R.drawable.ic_song_hq);
+        }
+        helper.getView(R.id.iv_tone).setVisibility(showBitrate ? View.VISIBLE : View.GONE);
     }
 
     /**

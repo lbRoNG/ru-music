@@ -153,8 +153,8 @@ public class PlayController
         // 停止
         stopTimer();
         // 设置值
-        start = (start / 1000) + 1;
-        total = (total / 1000) - start;
+        start = (start / 1000);
+        total = (total / 1000) - start + 1;
         if(start < 0 || total < 0 || start > total){
             return;
         }
@@ -187,7 +187,7 @@ public class PlayController
         // 总时间，最大设置60分钟一首
         long total = 60 * 60 * 1000;
         // 一圈毫秒值
-        long one = 12000;
+        long one = 20000;
         // 圈数
         long count = total / one;
         // 取消原有动画

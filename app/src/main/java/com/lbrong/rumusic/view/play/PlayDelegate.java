@@ -7,13 +7,14 @@ import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
-
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.bumptech.glide.request.RequestOptions;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
+import com.lbrong.rumusic.common.type.PlayMethodEnum;
 import com.lbrong.rumusic.common.utils.DateUtils;
+import com.lbrong.rumusic.iface.listener.OnPlayMethodChangeListener;
 import com.lbrong.rumusic.view.base.AppDelegate;
 
 public class PlayDelegate extends AppDelegate {
@@ -71,6 +72,7 @@ public class PlayDelegate extends AppDelegate {
         if(auto){
             startCDRotateAnim();
         }
+        setPlayIcon(auto);
     }
 
     /**
@@ -79,12 +81,13 @@ public class PlayDelegate extends AppDelegate {
      * @param current 当前时间
      */
     public void setMusicDuration(long total,long current){
-        SeekBar bar = get(R.id.sek_song);
+        SeekBar bar = get(R.id.skb_song);
         TextView tvCurrent = get(R.id.tv_current_duration);
         TextView tvTotal = get(R.id.tv_total_duration);
         tvCurrent.setText(DateUtils.getDateString(current,"mm:ss"));
         tvTotal.setText(DateUtils.getDateString(total,"mm:ss"));
-        bar.setProgress((int) ((current * 100) / total));
+        bar.setMax((int)(total / 1000));
+        bar.setProgress((int)(current / 1000));
     }
 
     /**
@@ -95,7 +98,7 @@ public class PlayDelegate extends AppDelegate {
         // 总时间，最大设置60分钟一首
         long total = 60 * 60 * 1000;
         // 一圈毫秒值
-        long one = 12000;
+        long one = 20000;
         // 圈数
         long count = total / one;
         // 取消原有动画
@@ -113,5 +116,98 @@ public class PlayDelegate extends AppDelegate {
      */
     public void stopCDRotateAnim(){
         get(R.id.iv_cover).animate().cancel();
+    }
+
+    /**
+     * 切换播放暂停按钮
+     */
+    public void setPlayIcon(boolean isPlaying) {
+        ImageView view = get(R.id.iv_play);
+        int resId = isPlaying ? R.drawable.ic_play_pause : R.drawable.ic_play_start;
+        view.setImageResource(resId);
+    }
+
+    /**
+     * 设置进度
+     */
+    public void setProgress(long current) {
+        SeekBar seekBar = get(R.id.skb_song);
+        TextView tvCurrent = get(R.id.tv_current_duration);
+        seekBar.setProgress((int)(current / 1000));
+        tvCurrent.setText(DateUtils.getDateString(current,"mm:ss"));
+    }
+
+    /**
+     * 设置播放方式
+     */
+    public void setPlayMethod(PlayMethodEnum method){
+        ImageView iv1 = get(R.id.iv_order_loop);
+        ImageView iv2 = get(R.id.iv_order_sort);
+        ImageView iv3 = get(R.id.iv_order_single);
+        ImageView iv4 = get(R.id.iv_order_random);
+
+        iv1.setSelected(method == PlayMethodEnum.ORDER_LOOP);
+        iv2.setSelected(method == PlayMethodEnum.ORDER);
+        iv3.setSelected(method == PlayMethodEnum.SINGLE);
+        iv4.setSelected(method == PlayMethodEnum.RANDOM);
+    }
+
+    /**
+     * 设置播放方式切换监听
+     */
+    public void setOnPlayMethodChangeListener(OnPlayMethodChangeListener listener){
+        if(listener != null){
+            PlayChangeListener temp = new PlayChangeListener(listener);
+            get(R.id.iv_order_loop).setOnClickListener(temp);
+            get(R.id.iv_order_sort).setOnClickListener(temp);
+            get(R.id.iv_order_single).setOnClickListener(temp);
+            get(R.id.iv_order_random).setOnClickListener(temp);
+        }
+    }
+
+    /**
+     * 设置进度条监听
+     */
+    public void setSeekBarListener(SeekBar.OnSeekBarChangeListener listener) {
+        SeekBar view = get(R.id.skb_song);
+        view.setOnSeekBarChangeListener(listener);
+    }
+
+    /**
+     * 播放方式切换监听
+     */
+    private class PlayChangeListener implements View.OnClickListener{
+        private OnPlayMethodChangeListener listener;
+
+        PlayChangeListener(OnPlayMethodChangeListener listener){
+            this.listener = listener;
+        }
+
+        @Override
+        public void onClick(View v) {
+            // 已经选中的不做处理
+            if(!v.isSelected()){
+                // 未选中的把自己设置为selected，其他都为unSelected
+                get(R.id.iv_order_sort).setSelected(v.getId() == R.id.iv_order_sort);
+                get(R.id.iv_order_random).setSelected(v.getId() == R.id.iv_order_random);
+                get(R.id.iv_order_single).setSelected(v.getId() == R.id.iv_order_single);
+                get(R.id.iv_order_loop).setSelected(v.getId() == R.id.iv_order_loop);
+                // 返回正在选中的播放方式
+                switch (v.getId()){
+                    case R.id.iv_order_sort:
+                        listener.onPlayMethodChange(PlayMethodEnum.ORDER);
+                        break;
+                    case R.id.iv_order_random:
+                        listener.onPlayMethodChange(PlayMethodEnum.RANDOM);
+                        break;
+                    case R.id.iv_order_single:
+                        listener.onPlayMethodChange(PlayMethodEnum.SINGLE);
+                        break;
+                    case R.id.iv_order_loop:
+                        listener.onPlayMethodChange(PlayMethodEnum.ORDER_LOOP);
+                        break;
+                }
+            }
+        }
     }
 }
