@@ -583,8 +583,7 @@ public class MainActivity
         long currentId = playList.getPlayingId();
         final Song plying = LitePal.where("songid=" + String.valueOf(currentId)).findFirst(Song.class);
         if(plying != null){
-            // 恢复服务
-            playService.setPlayList(playList);
+            // 恢复播放状态
             playService.rePrepare(plying,(int)playList.getRecord());
             // 确保适配器初始化完成
             addDisposable(

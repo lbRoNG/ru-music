@@ -12,7 +12,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.widget.SeekBar;
-
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.adapter.PlayPlayListSongAdapter;
 import com.lbrong.rumusic.common.db.table.PlayList;
@@ -25,11 +24,8 @@ import com.lbrong.rumusic.iface.listener.OnPlayMethodChangeListener;
 import com.lbrong.rumusic.presenter.base.ActivityPresenter;
 import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.play.PlayDelegate;
-
 import org.greenrobot.eventbus.Subscribe;
-
 import java.util.concurrent.TimeUnit;
-
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -62,11 +58,6 @@ public class PlayActivity
     @Override
     protected boolean displayHomeAsUp() {
         return false;
-    }
-
-    @Override
-    protected boolean isFullScreen() {
-        return true;
     }
 
     @Override
@@ -243,12 +234,14 @@ public class PlayActivity
      * 设置播放列表
      * 播放详情不会更新播放列表，直接到服务取出就好
      */
-    private void settingPlayList(){
-        if(playService != null){
+    private void settingPlayList() {
+        if (playService != null) {
             PlayList playList = playService.getPlayList();
-            viewDelegate.setPlayListSongsAdapter(playListSongAdapter = new PlayPlayListSongAdapter(playList));
+            playListSongAdapter = new PlayPlayListSongAdapter(playList);
+            viewDelegate.setPlayListSongsAdapter(playListSongAdapter);
         }
     }
+
 
     /**
      * 开启时间计数器

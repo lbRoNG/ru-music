@@ -7,6 +7,7 @@ import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.bumptech.glide.request.RequestOptions;
@@ -30,17 +31,16 @@ public class PlayDelegate extends AppDelegate {
     }
 
     private void initBottomSheet(){
-        BottomSheetBehavior behavior = BottomSheetBehavior.from(get(R.id.rv_play_list));
+        BottomSheetBehavior behavior = BottomSheetBehavior.from(get(R.id.bot_play_list));
         behavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-        behavior.setPeekHeight(0);
-        behavior.setHideable(true);
+        int showHeight = (int) getActivity().getResources().getDimension(R.dimen.play_playlist_header_h);
+        behavior.setPeekHeight(showHeight);
+        behavior.setHideable(false);
     }
 
     public void showBottomSheet(){
-        RecyclerView view = get(R.id.rv_play_list);
-        BottomSheetBehavior behavior = BottomSheetBehavior.from(view);
+        BottomSheetBehavior behavior = BottomSheetBehavior.from(get(R.id.bot_play_list));
         if(behavior.getState() == BottomSheetBehavior.STATE_COLLAPSED){
-            view.setVisibility(View.VISIBLE);
             behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
         }
     }

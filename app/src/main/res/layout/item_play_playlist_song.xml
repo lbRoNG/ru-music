@@ -4,6 +4,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="@dimen/play_playlist_song_h"
+    android:background="@color/colorPrimary"
     android:foreground="?android:attr/selectableItemBackground">
 
     <TextView
@@ -11,9 +12,9 @@
         android:layout_width="30dp"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
-        android:gravity="center"
         android:layout_marginStart="@dimen/dp8"
         android:layout_marginEnd="@dimen/dp8"
+        android:gravity="center"
         android:singleLine="true"
         android:textColor="@color/textPrimary"
         tools:text="1" />
@@ -45,8 +46,8 @@
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
         android:layout_marginStart="@dimen/dp16"
-        android:layout_toEndOf="@id/tv_song_name"
         android:layout_toStartOf="@id/iv_more"
+        android:layout_toEndOf="@id/tv_song_name"
         android:singleLine="true"
         android:textColor="@color/textThirdly"
         android:textSize="@dimen/sp12"
@@ -54,12 +55,21 @@
 
     <ImageView
         android:id="@+id/iv_more"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="@dimen/dp8"
         android:layout_alignParentEnd="true"
         android:layout_centerVertical="true"
-        android:layout_marginEnd="@dimen/dp16"
         android:contentDescription="@null"
+        android:foreground="?android:attr/selectableItemBackground"
         android:src="@drawable/ic_play_playlist_more" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="@dimen/dp16"
+        android:layout_marginEnd="@dimen/dp16"
+        android:background="@color/divider" />
 
 </RelativeLayout>

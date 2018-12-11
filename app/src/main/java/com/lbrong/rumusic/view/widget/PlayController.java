@@ -14,6 +14,7 @@ import android.widget.TextView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.signature.ObjectKey;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.iface.listener.OnPlayControllerClickListener;
 import java.util.concurrent.TimeUnit;
@@ -122,6 +123,7 @@ public class PlayController
         Glide.with(this)
                 .load(cover != null ? cover : R.drawable.ic_song_circle_default_cover)
                 .apply(RequestOptions.bitmapTransform(new RoundedCorners(100)))
+                .apply(RequestOptions.signatureOf(new ObjectKey(name)))
                 .into(ivCover);
         tvSongName.setText(name);
         tvArtist.setText(artist);

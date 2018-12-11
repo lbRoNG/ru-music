@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingTop="24dp"
     tools:context=".presenter.play.PlayActivity">
 
     <RelativeLayout
@@ -209,13 +208,22 @@
             tools:text="1/123" />
     </RelativeLayout>
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/rv_play_list"
+    <LinearLayout
+        android:id="@+id/bot_play_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/colorPrimary"
-        android:visibility="gone"
-        app:layoutManager="android.support.v7.widget.LinearLayoutManager"
-        app:layout_behavior="@string/bottom_sheet_behavior" />
+        android:orientation="vertical"
+        app:layout_behavior="@string/bottom_sheet_behavior">
+
+        <include layout="@layout/header_play_playlist" />
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/rv_play_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:layoutManager="android.support.v7.widget.LinearLayoutManager" />
+
+    </LinearLayout>
+
 
 </android.support.design.widget.CoordinatorLayout>

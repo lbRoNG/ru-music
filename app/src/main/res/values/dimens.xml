@@ -26,6 +26,7 @@
     <dimen name="home_songlist_w">220dp</dimen>
     <dimen name="home_playlist_h">350dp</dimen>
     <dimen name="home_playlist_song_h">48dp</dimen>
-    <dimen name="play_playlist_song_h">48dp</dimen>
+    <dimen name="play_playlist_song_h">55dp</dimen>
+    <dimen name="play_playlist_header_h">42dp</dimen>
 
 </resources>
