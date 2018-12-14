@@ -98,7 +98,20 @@ public class PlayList extends LitePalSupport {
         return playRecords;
     }
 
+    public void setRandomSongs(List<Song> randomSongs) {
+        this.randomSongs = randomSongs;
+    }
+
     public void setPlayRecords(List<PlayRecord> playRecords) {
         this.playRecords = playRecords;
+    }
+
+    public long getSeed() {
+        return seed;
+    }
+
+    public void setSeed(long seed) {
+        this.seed = seed;
+        randomSongs = null;
     }
 }

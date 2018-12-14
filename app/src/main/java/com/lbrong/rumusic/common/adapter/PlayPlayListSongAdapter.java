@@ -9,6 +9,8 @@ import com.chad.library.adapter.base.BaseViewHolder;
 import com.lbrong.rumusic.R;
 import com.lbrong.rumusic.common.db.table.PlayList;
 import com.lbrong.rumusic.common.db.table.Song;
+import com.lbrong.rumusic.common.type.PlayMethodEnum;
+import com.lbrong.rumusic.common.utils.SettingHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +38,8 @@ public class PlayPlayListSongAdapter extends BaseQuickAdapter<Song,BaseViewHolde
         task();
     }
 
+    protected void taskComplete(){}
+
     public void stopTask(){
         if(task != null && !task.isDisposed()){
             task.dispose();
@@ -45,13 +49,17 @@ public class PlayPlayListSongAdapter extends BaseQuickAdapter<Song,BaseViewHolde
     /**
      * 从数据库拿出播放列表对应的歌曲
      */
-    private void task(){
+    public void task(){
         stopTask();
 
         task = Observable.fromCallable(new Callable<List<Song>>() {
             @Override
             public List<Song> call(){
-                return playList.getSongs();
+                if(SettingHelper.build().getPlayMethod() == PlayMethodEnum.RANDOM){
+                    return playList.getRandomSongs();
+                } else {
+                    return playList.getSongs();
+                }
             }
         }).subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -59,12 +67,13 @@ public class PlayPlayListSongAdapter extends BaseQuickAdapter<Song,BaseViewHolde
                     @Override
                     public void accept(List<Song> songs){
                         setNewData(songs);
-                        for (Song s : playList.getSongs()) {
+                        for (Song s : songs) {
                             if(s.getSongId() == playList.getPlayingId()){
                                 playing = s;
                                 break;
                             }
                         }
+                        taskComplete();
                     }
                 });
     }
@@ -88,6 +97,7 @@ public class PlayPlayListSongAdapter extends BaseQuickAdapter<Song,BaseViewHolde
             helper.setImageResource(R.id.iv_tone,bitrate > 350 ? R.drawable.ic_song_sq : R.drawable.ic_song_hq);
         }
         helper.getView(R.id.iv_tone).setVisibility(showBitrate ? View.VISIBLE : View.GONE);
+        helper.addOnClickListener(R.id.iv_more);
     }
 
     /**

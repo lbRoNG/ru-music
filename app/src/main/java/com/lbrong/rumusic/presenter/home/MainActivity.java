@@ -1,7 +1,6 @@
 package com.lbrong.rumusic.presenter.home;
 
 import android.Manifest;
-import android.app.ActivityOptions;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -9,12 +8,15 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
+import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v4.util.Pair;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.MenuItem;
 import android.view.View;
+
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.chad.library.adapter.base.BaseQuickAdapter;
@@ -40,15 +42,18 @@ import com.lbrong.rumusic.service.PlayService;
 import com.lbrong.rumusic.view.home.MainDelegate;
 import com.lbrong.rumusic.view.widget.ErrorView;
 import com.tbruyelle.rxpermissions2.RxPermissions;
+
 import org.greenrobot.eventbus.Subscribe;
 import org.litepal.LitePal;
 import org.litepal.crud.callback.FindCallback;
 import org.litepal.crud.callback.UpdateOrDeleteCallback;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
@@ -284,7 +289,12 @@ public class MainActivity
     @Override
     public void onGo() {
         Intent send = new Intent(this,PlayActivity.class);
-        startActivity(send,ActivityOptions.makeSceneTransitionAnimation(this).toBundle());
+        View[] shares = viewDelegate.getShareView();
+        ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(this,
+                Pair.create(shares[0],"songCover"),
+                Pair.create(shares[1],"songName"),
+                Pair.create(shares[2],"songArtist"));
+        startActivity(send,options.toBundle());
     }
 
     /**

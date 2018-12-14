@@ -157,7 +157,7 @@ public class PlayController
         // 设置值
         start = (start / 1000);
         total = (total / 1000) - start + 1;
-        if(start < 0 || total < 0 || start > total){
+        if(start < 0 || total < 0){
             return;
         }
         // 开始
@@ -231,5 +231,26 @@ public class PlayController
     public void setPlayBtn(boolean playing){
         ivPlay.setTag(playing ? "pause" : "play");
         ivPlay.setImageResource(playing ? R.drawable.ic_controller_pause : R.drawable.ic_controller_play);
+    }
+
+    /**
+     * 封面图view
+     */
+    public ImageView getCoverView(){
+        return ivCover;
+    }
+
+    /**
+     * 封面图view
+     */
+    public TextView getTitleView(){
+        return tvSongName;
+    }
+
+    /**
+     * 封面图view
+     */
+    public TextView getArtistView(){
+        return tvArtist;
     }
 }

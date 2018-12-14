@@ -30,6 +30,9 @@ public class PlayDelegate extends AppDelegate {
         initBottomSheet();
     }
 
+    /**
+     * 初始化底部播放列表样式
+     */
     private void initBottomSheet(){
         BottomSheetBehavior behavior = BottomSheetBehavior.from(get(R.id.bot_play_list));
         behavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
@@ -38,6 +41,9 @@ public class PlayDelegate extends AppDelegate {
         behavior.setHideable(false);
     }
 
+    /**
+     * 显示播放列表
+     */
     public void showBottomSheet(){
         BottomSheetBehavior behavior = BottomSheetBehavior.from(get(R.id.bot_play_list));
         if(behavior.getState() == BottomSheetBehavior.STATE_COLLAPSED){
@@ -46,11 +52,27 @@ public class PlayDelegate extends AppDelegate {
     }
 
     /**
+     * 设置播放序号
+     */
+    public void setPlayListPlayingNo(int current,int total){
+        TextView view = get(R.id.tv_list);
+        view.setText(current + " / " + total);
+    }
+
+    /**
      * 设置歌曲列表
      */
     public void setPlayListSongsAdapter(BaseQuickAdapter adapter) {
         RecyclerView view = get(R.id.rv_play_list);
         view.setAdapter(adapter);
+    }
+
+    /**
+     * 滑动到播放列表中正在播放的曲目
+     */
+    public void scrollToPlayingAsPlayList(int position){
+        RecyclerView view = get(R.id.rv_play_list);
+        view.scrollToPosition(position);
     }
 
     /**
@@ -172,6 +194,8 @@ public class PlayDelegate extends AppDelegate {
         SeekBar view = get(R.id.skb_song);
         view.setOnSeekBarChangeListener(listener);
     }
+
+
 
     /**
      * 播放方式切换监听

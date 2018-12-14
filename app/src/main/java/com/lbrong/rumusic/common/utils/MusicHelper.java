@@ -205,7 +205,6 @@ public final class MusicHelper {
 
     /**
      * 下一首
-     *
      * @param playList 播放列表实体
      * @param fromUser 是否是用户主动切换
      * @return 返回null表示播放异常，为空的Song实体，表示全部播放完成
@@ -270,6 +269,10 @@ public final class MusicHelper {
                     if (!fromUser) {
                         // 单曲循环
                         next = index;
+                    } else {
+                        if (size == next) {
+                            next = 0;
+                        }
                     }
                     break;
             }
@@ -282,7 +285,6 @@ public final class MusicHelper {
     /**
      * 根据播放方法和播放列表计算出上一首要播放的歌曲
      * 触发上一曲肯定是用户主动切换
-     *
      * @param playList 播放列表
      * @return 返回null表示播放异常
      */

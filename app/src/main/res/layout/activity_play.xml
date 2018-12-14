@@ -13,6 +13,7 @@
         <ImageView
             android:id="@+id/iv_cover"
             android:layout_width="220dp"
+            android:transitionName="songCover"
             android:layout_height="220dp"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="@dimen/dp32"
@@ -29,6 +30,7 @@
             android:layout_marginTop="@dimen/dp32"
             android:layout_marginEnd="@dimen/dp16"
             android:ellipsize="marquee"
+            android:transitionName="songName"
             android:marqueeRepeatLimit="marquee_forever"
             android:singleLine="true"
             android:textColor="@color/textPrimary"
@@ -44,6 +46,7 @@
             android:layout_centerHorizontal="true"
             android:layout_marginStart="@dimen/dp16"
             android:layout_marginEnd="@dimen/dp16"
+            android:transitionName="songArtist"
             android:singleLine="true"
             android:textColor="@color/textSecondary"
             tools:text="Singer Name" />
@@ -212,6 +215,8 @@
         android:id="@+id/bot_play_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/colorPrimary"
+        android:elevation="6dp"
         android:orientation="vertical"
         app:layout_behavior="@string/bottom_sheet_behavior">
 

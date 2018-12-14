@@ -9,6 +9,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.view.View;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.lbrong.rumusic.R;
@@ -257,5 +258,13 @@ public class MainDelegate extends AppDelegate {
     public void scrollToPlayingAsPlayList(int position){
         RecyclerView view = get(R.id.rv_play_list);
         view.scrollToPosition(position);
+    }
+
+    /**
+     * 共享元素view
+     */
+    public View[] getShareView(){
+        PlayController controller = get(R.id.play_controller);
+        return new View[]{controller.getCoverView(),controller.getTitleView(),controller.getArtistView()};
     }
 }
